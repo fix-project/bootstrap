@@ -23,8 +23,7 @@ string c_to_elf( char* system_dep_files[],
                  char* clang_dep_files[],
                  char* function_c_buffer,
                  char* function_h_impl_buffer,
-                 char* function_h_buffer,
-                 char* function_fixpoint_h_buffer )
+                 char* function_h_buffer )
 {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -49,14 +48,13 @@ string c_to_elf( char* system_dep_files[],
     InMemFS->addFile( system_deps[i], 0, MemoryBuffer::getMemBuffer( system_dep_files[i] ) );
   }
 
-  for ( size_t i = 0; i < 92; i++ ) {
+  for ( size_t i = 0; i < 93; i++ ) {
     InMemFS->addFile( clang_deps[i], 0, MemoryBuffer::getMemBuffer( clang_dep_files[i] ) );
   }
 
   InMemFS->addFile( "/fix/function.c", 0, MemoryBuffer::getMemBuffer( function_c_buffer ) );
   InMemFS->addFile( "/fix/function-impl.h", 0, MemoryBuffer::getMemBuffer( function_h_impl_buffer ) );
   InMemFS->addFile( "/fix/function.h", 0, MemoryBuffer::getMemBuffer( function_h_buffer ) );
-  InMemFS->addFile( "/fix/function_fixpoint.h", 0, MemoryBuffer::getMemBuffer( function_fixpoint_h_buffer ) );
   InMemFS->addFile( "/fix/wasm-rt.h", 0, MemoryBuffer::getMemBuffer( wasm_rt_content ) );
 
   InMemFS->setCurrentWorkingDirectory( "/fix" );

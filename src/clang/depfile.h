@@ -72,6 +72,7 @@ static const char* clang_deps[] = { "/usr/lib/llvm-16/lib/clang/16.0.0/include/i
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/mmintrin.h",
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/xmmintrin.h",
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/mm_malloc.h",
+                                    "/usr/lib/llvm-16/lib/clang/16.0.0/include/stdarg.h",
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/stddef.h",
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/__stddef_max_align_t.h",
                                     "/usr/lib/llvm-16/lib/clang/16.0.0/include/emmintrin.h",

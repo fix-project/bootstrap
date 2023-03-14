@@ -7,7 +7,7 @@
   (table $input (export "ro_table_0") 0 externref)
   (table $clang_deps (export "ro_table_1") 0 externref)
   (table $return (export "rw_table_0") 4 externref)
-  (table $rw_table_1 (export "rw_table_1") 256 externref)
+  (table $rw_table_1 (export "rw_table_1") 257 externref)
   ;; access program memory
   (func (export "get_program_i32") (param $offset i32) (result i32)
     (local.get $offset)
@@ -72,11 +72,22 @@
     (table.size $clang_deps)
   )
   ;; rw_table_0
-  (func (export "set_rw_table_0") (param $index i32) (param $val externref) 
+  (func (export "set_rw_table_0") (param $index i32) (param $val externref)
     (table.set $return (local.get $index) (local.get $val))
   )
+  (func (export "grow_rw_table_0") (param $size i32) (param $init_val externref ) (result i32)
+    (local.get $init_val)
+    (local.get $size)
+    (table.grow $return)
+  )
   ;; rw_table_1
-  (func (export "set_rw_table_1") (param $index i32) (param $val externref) 
+  (func (export "set_rw_table_1") (param $index i32) (param $val externref)
     (table.set $rw_table_1 (local.get $index) (local.get $val))
   )
+  (func (export "grow_rw_table_1") (param $size i32) (param $init_val externref ) (result i32)
+    (local.get $init_val)
+    (local.get $size)
+    (table.grow $rw_table_1)
+  )
+
 )

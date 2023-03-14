@@ -3,7 +3,6 @@
 #include <crypto++/sha.h>
 
 #include "sha256.hh"
-#include "timer.hh"
 
 using namespace std;
 namespace CryptoPP {
@@ -12,7 +11,6 @@ using byte = unsigned char;
 
 string sha256::encode( string_view input )
 {
-  GlobalScopeTimer<Timer::Category::Hash> record_timer;
   CryptoPP::SHA256 hash;
 
   CryptoPP::byte digest[CryptoPP::SHA256::DIGESTSIZE];
@@ -23,7 +21,6 @@ string sha256::encode( string_view input )
 
 bool sha256::verify( const string& ret, const string& input )
 {
-  GlobalScopeTimer<Timer::Category::Hash> record_timer;
   CryptoPP::SHA256 hash;
   bool verified;
 

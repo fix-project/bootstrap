@@ -16,8 +16,10 @@ std::string link_elfs( std::vector<char*> dep_files, std::vector<size_t> dep_fil
   for ( size_t i = 0; i < dep_files.size(); i++ ) {
     std::string file_name = work_directory + std::string( "file" ) + std::to_string( (int)i ) + ".o";
     file_names.push_back( file_name );
-    args.push_back( file_names.back().c_str() );
     InMemFS->addFile( file_name, 0, MemoryBuffer::getMemBuffer( { dep_files[i], dep_file_sizes[i] } ) );
+  }
+  for ( size_t i = 0; i < dep_files.size(); i++ ) {
+    args.push_back( file_names[i].c_str() );
   }
   InMemFS->setCurrentWorkingDirectory( "/fix" );
 

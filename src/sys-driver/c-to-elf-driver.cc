@@ -5,22 +5,20 @@
 
 #include "c-to-elf.hh"
 #include "depfile.h"
-#include "filenames.hh"
+#include "file_names.hh"
 #include "mmap.hh"
 
 using namespace std;
 
 int main( int argc, char* argv[] )
 {
-  if ( argc != 4 ) {
-    cerr << "Usage: " << argv[0]
-         << " path_to_c path_to_h_impl path_to_h path_to_fixpoint_header path_to_resource_headers path_to_obj\n";
+  if ( argc != 6 ) {
+    cerr << "Usage: " << argv[0] << " path_to_c path_to_h_impl path_to_h path_to_resource_headers path_to_obj\n";
   }
 
   ReadOnlyFile c_content { argv[1] };
   ReadOnlyFile h_impl_content { argv[2] };
   ReadOnlyFile h_content { argv[3] };
-  ReadOnlyFile h_fixpoint_content { argv[4] };
 
   std::vector<ReadOnlyFile> system_dep_files;
   char* system_dep_content[63];
@@ -32,20 +30,17 @@ int main( int argc, char* argv[] )
   }
   dep_index = 0;
   std::vector<ReadOnlyFile> clang_dep_files;
-  char* clang_dep_content[92];
+  char* clang_dep_content[93];
   for ( auto clang_dep_path : clang_deps ) {
-    std::string resource_dir_path = std::string( argv[5] ) + get_base_name( clang_dep_path );
+    std::string resource_dir_path = std::string( argv[4] ) + get_base_name( clang_dep_path );
     clang_dep_files.push_back( ReadOnlyFile( resource_dir_path ) );
     clang_dep_content[dep_index] = clang_dep_files.back().addr();
+    dep_index++;
   }
 
-  string elf_res = c_to_elf( system_dep_content,
-                             clang_dep_content,
-                             c_content.addr(),
-                             h_impl_content.addr(),
-                             h_content.addr(),
-                             h_fixpoint_content.addr() );
-  ofstream fout_obj( argv[6] );
+  string elf_res
+    = c_to_elf( system_dep_content, clang_dep_content, c_content.addr(), h_impl_content.addr(), h_content.addr() );
+  ofstream fout_obj( argv[5] );
   fout_obj << elf_res;
   fout_obj.close();
 

@@ -41,7 +41,7 @@ tuple<array<string, NUM_OUTPUT>, string, string, string> wasm_to_c( const void* 
   }
   MemoryStringStream h_impl_stream;
   MemoryStringStream h_stream;
-  string fixpoint_header;
+  string fixpoint_c;
 
   ValidateModule( &module, &errors, options.features );
   GenerateNames( &module );
@@ -67,11 +67,11 @@ tuple<array<string, NUM_OUTPUT>, string, string, string> wasm_to_c( const void* 
           &module,
           write_c_options );
 
-  fixpoint_header = initcomposer::compose_header( "function", &module, &errors, &inspector );
+  fixpoint_c = initcomposer::compose_header( "function", &module, &errors, &inspector );
 
   array<string, NUM_OUTPUT> c_outputs;
   for ( unsigned int i = 0; i < NUM_OUTPUT; i++ ) {
     c_outputs[i] = c_streams[i].ReleaseStringBuf();
   }
-  return { c_outputs, h_stream.ReleaseStringBuf(), h_impl_stream.ReleaseStringBuf(), fixpoint_header };
+  return { c_outputs, h_stream.ReleaseStringBuf(), h_impl_stream.ReleaseStringBuf(), fixpoint_c };
 }

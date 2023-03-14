@@ -25,7 +25,7 @@ extern externref get_ro_table_1( int32_t )
 extern void attach_tree_ro_table_1( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_1" ) ) );
 
-// resource_limits | { clang | system_dep | clang_dep } | { h_impl | h | h_fixpoint } | c
+// resource_limits | { clang | system_dep | clang_dep } | { h_impl | h } | c
 externref fixpoint_apply( externref encode )
 {
   attach_tree_ro_table_0( encode );
@@ -57,7 +57,6 @@ externref fixpoint_apply( externref encode )
   attach_tree_ro_table_1( get_ro_table_0( 2 ) );
   externref h_impl_blob = get_ro_table_1( 0 );
   externref h_blob = get_ro_table_1( 1 );
-  externref h_fixpoint_blob = get_ro_table_1( 2 );
 
   attach_blob_ro_mem_0( h_impl_blob );
   char* h_impl_buffer = (char*)malloc( size_ro_mem_0() + 1 );
@@ -69,18 +68,12 @@ externref fixpoint_apply( externref encode )
   ro_0_to_program_memory( h_buffer, 0, size_ro_mem_0() );
   h_buffer[size_ro_mem_0()] = '\0';
 
-  attach_blob_ro_mem_0( h_fixpoint_blob );
-  char* h_fixpoint_buffer = (char*)malloc( size_ro_mem_0() + 1 );
-  ro_0_to_program_memory( h_fixpoint_buffer, 0, size_ro_mem_0() );
-  h_fixpoint_buffer[size_ro_mem_0()] = '\0';
-
   externref c_blob = get_ro_table_0( 3 );
   char* c_buffer = (char*)malloc( size_ro_mem_0() + 1 );
   ro_0_to_program_memory( c_buffer, 0, size_ro_mem_0() );
   c_buffer[size_ro_mem_0()] = '\0';
 
-  std::string res
-    = c_to_elf( system_dep_files, clang_dep_files, c_buffer, h_impl_buffer, h_buffer, h_fixpoint_buffer );
+  std::string res = c_to_elf( system_dep_files, clang_dep_files, c_buffer, h_impl_buffer, h_buffer );
 
   if ( ( res.size() >> 16 ) > 0 ) {
     grow_rw_0( res.size() >> 16 );
