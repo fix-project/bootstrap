@@ -146,3 +146,13 @@ add_custom_command(
           -o map.wasm)
 
 add_custom_target(map-wasm ALL DEPENDS map.wasm)
+
+add_custom_command(
+  OUTPUT "compile.wasm"
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/compile.wat
+  COMMAND $ENV{HOME}/wasm-toolchain/wabt/build/wat2wasm
+          --enable-multi-memory
+          ${CMAKE_CURRENT_SOURCE_DIR}/compile.wat
+          -o compile.wasm)
+
+add_custom_target(compile-wasm ALL DEPENDS compile.wasm)
