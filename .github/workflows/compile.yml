@@ -14,11 +14,11 @@ jobs:
       - shell: bash
         run: 'echo HOME=/home | sudo tee -a $GITHUB_ENV'
       - name: cmake-build
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=MinSizeRel
       - name: compile-build
         run: cmake --build build --parallel 8
       - name: cmake-fix-build
-        run: cmake -S . -B fix-build -DBUILD_SYS_DRIVER:BOOL=OFF
+        run: cmake -S . -B fix-build -DBUILD_SYS_DRIVER:BOOL=OFF -DCMAKE_BUILD_TYPE=MinSizeRel
       - name: compile-fix-build
         run: cmake --build fix-build --parallel 8
       - name: build
