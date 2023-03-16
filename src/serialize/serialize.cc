@@ -23,7 +23,7 @@ Name serialize_file( string base_path, string file_path )
   Name blob_name( hash, file.length(), ContentType::Blob );
   string file_name = base64::encode( blob_name );
   ofstream fout( base_path + ".fix/" + file_name );
-  fout << file.addr();
+  fout << string_view( file );
   fout.close();
   return blob_name;
 }
@@ -98,6 +98,8 @@ int main( int argc, char* argv[] )
     fout.close();
     index++;
   }
+
+  index = 0;
   for ( auto file : files ) {
     std::ofstream fout( base_path + "boot/" + file + "-wasm" );
     fout << base64::encode( wasm_names[index] );
