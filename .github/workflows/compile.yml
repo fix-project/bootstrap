@@ -1,0 +1,41 @@
+name: Bootstrap
+
+on: [workflow_dispatch, push]
+
+jobs:
+  build:
+      runs-on: ubuntu-latest
+      container: ghcr.io/fix-project/wasm_toolchain_docker:latest
+      steps:
+      - name: "checkout repository"
+        uses: "actions/checkout@v2"
+        with:
+          submodules: 'recursive'
+      - shell: bash
+        run: 'echo HOME=/home | sudo tee -a $GITHUB_ENV'
+      - name: cmake-build
+        run: cmake -S . -B build
+      - name: compile-build
+        run: cmake --build build --parallel 8
+      - name: cmake-fix-build
+        run: cmake -S . -B fix-build -DBUILD_SYS_DRIVER:BOOL=OFF
+      - name: compile-fix-build
+        run: cmake --build fix-build --parallel 8
+      - name: build
+        shell: bash
+        run: |
+          chmod +x build.sh
+          ./build.sh
+      - name: serialize
+        shell: bash
+        run: |
+          chmod +x serialize.sh
+          ./serialize.sh
+      - name: Upload bootstrap artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: bootstrap
+          path: |
+            ./.fix/
+            ./boot/
+          if-no-files-found: error
