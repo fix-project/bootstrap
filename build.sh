@@ -11,10 +11,10 @@ for task in ${Tasks}; do
 
   for i in {0..255}
   do
-    ${SRC}/build/src/sys-driver/c-to-elf-sys ${OUTPUT}/${task}/function${i}.c ${OUTPUT}/${task}/function-impl.h ${OUTPUT}/${task}/function.h ${SRC}/build/llvm-project/llvm/lib/clang/16.0.0/include/ ${OUTPUT}/${task}/function${i}.o &
+    ${SRC}/build/src/sys-driver/c-to-elf-sys ${OUTPUT}/${task}/function${i}.c ${OUTPUT}/${task}/function-impl.h ${OUTPUT}/${task}/function.h ${SRC}/build/llvm-project/llvm/lib/clang/16.0.0/include/ ${OUTPUT}/${task}/function${i}.o
   done
 
-  ${SRC}/build/src/sys-driver/c-to-elf-sys ${OUTPUT}/${task}/function-fixpoint.c ${OUTPUT}/${task}/function-impl.h ${OUTPUT}/${task}/function.h ${SRC}/build/llvm-project/llvm/lib/clang/16.0.0/include/ ${OUTPUT}/${task}/function-fixpoint.o &
+  ${SRC}/build/src/sys-driver/c-to-elf-sys ${OUTPUT}/${task}/function-fixpoint.c ${OUTPUT}/${task}/function-impl.h ${OUTPUT}/${task}/function.h ${SRC}/build/llvm-project/llvm/lib/clang/16.0.0/include/ ${OUTPUT}/${task}/function-fixpoint.o
   wait
   LLDSYS="${SRC}/build/src/sys-driver/link-elfs-sys ${OUTPUT}/${task}.o"
 
