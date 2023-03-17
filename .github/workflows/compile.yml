@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           chmod +x build.sh
-          ./build.sh
+          ./build.sh 2
       - name: serialize
         shell: bash
         run: |
