@@ -1,4 +1,9 @@
 #!/bin/bash
+# cmake -S . -B build
+# cmake --build build
+# cmake -S . -B fix-build -DBUILD_SYS_DRIVER=OFF
+# cmake --build fix-build
+
 PARALLEL=${1:-256}
 SRC_REL=`dirname $0`
 SRC=`realpath ${SRC_REL}`

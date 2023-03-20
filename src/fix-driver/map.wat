@@ -32,7 +32,7 @@
       (table.set $rw_table_0 (i32.const 2) (local.get $x))
       ;; arg[i]
       (table.set $rw_table_0 (i32.const 3) (table.get $ro_table_1 (local.get $i)))
-      (table.set $rw_table_1 (local.get $i) (call $create_thunk (call $create_tree_rw_table_0 (i32.const 3))))
+      (table.set $rw_table_1 (local.get $i) (call $create_thunk (call $create_tree_rw_table_0 (i32.const 4))))
       ;; i++
       (local.set $i (i32.add (local.get $i) (i32.const 1)))
       (br_if $ro_table_1_loop (i32.lt_s (local.get $i) (table.size $ro_table_1))))
