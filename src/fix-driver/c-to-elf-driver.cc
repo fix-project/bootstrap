@@ -45,8 +45,8 @@ externref fixpoint_apply( externref encode )
   }
 
   attach_tree_ro_table_1( clang_dep_tree );
-  char* clang_dep_files[92];
-  for ( size_t i = 0; i < 92; i++ ) {
+  char* clang_dep_files[93];
+  for ( size_t i = 0; i < 93; i++ ) {
     attach_blob_ro_mem_0( get_ro_table_1( i ) );
     char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
     ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
@@ -69,6 +69,7 @@ externref fixpoint_apply( externref encode )
   h_buffer[size_ro_mem_0()] = '\0';
 
   externref c_blob = get_ro_table_0( 3 );
+  attach_blob_ro_mem_0( c_blob );
   char* c_buffer = (char*)malloc( size_ro_mem_0() + 1 );
   ro_0_to_program_memory( c_buffer, 0, size_ro_mem_0() );
   c_buffer[size_ro_mem_0()] = '\0';
