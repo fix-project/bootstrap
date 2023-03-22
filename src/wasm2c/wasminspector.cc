@@ -8,6 +8,13 @@ namespace wasminspector {
 
 using namespace wabt;
 
+wabt::Error createErrorWithMessage( string message )
+{
+  wabt::Error error = wabt::Error();
+  error.message = message;
+  return error;
+}
+
 WasmInspector::WasmInspector( Module* module, Errors* errors )
   : errors_( errors )
   , current_module_( module )
@@ -51,6 +58,15 @@ WasmInspector::WasmInspector( Module* module, Errors* errors )
       imported_functions_.insert( import_->field_name );
     }
   }
+}
+
+bool WasmInspector::ExportsMainMemory()
+{
+  for ( Export* export_ : current_module_->exports ) {
+    if ( export_->kind == ExternalKind::Memory && export_->name == "memory" )
+      return true;
+  }
+  return false;
 }
 
 Result WasmInspector::OnMemoryCopyExpr( MemoryCopyExpr* expr )
@@ -161,12 +177,16 @@ Result WasmInspector::ValidateImports()
       case ExternalKind::Memory:
       case ExternalKind::Func: {
         if ( import->module_name != "fixpoint" ) {
+          string message = "ValidateImports: module name is not fixpoint " + import->field_name;
+          errors_->push_back( createErrorWithMessage( message ) );
           return Result::Error;
         }
         break;
       }
 
       default:
+        string message = "ValidateImports: ExternalKind not found";
+        errors_->push_back( createErrorWithMessage( message ) );
         return Result::Error;
     }
   }
@@ -187,6 +207,16 @@ Result WasmInspector::ValidateImports()
     }
   }
 
+  // unsafe_io requires memory called "memory"
+  if ( !ExportsMainMemory() ) {
+    for ( auto it = imported_functions_.begin(); it != imported_functions_.end(); it++ ) {
+      if ( *it == "unsafe_io" ) {
+        string message = "ValidateImports: If unsafe_io is imported, memory with name memory must be exported.";
+        errors_->push_back( createErrorWithMessage( message ) );
+        return Result::Error;
+      }
+    }
+  }
   return Result::Ok;
 }
 
@@ -203,6 +233,8 @@ Result WasmInspector::CheckMemoryAccess( Var* memidx )
        == exported_ro_mem_.end() ) {
     return Result::Ok;
   } else {
+    string message = "Error in CheckMemoryAccess";
+    errors_->push_back( createErrorWithMessage( message ) );
     return Result::Error;
   }
 }
@@ -216,4 +248,5 @@ Result WasmInspector::CheckTableAccess( Var* tableidx )
     return Result::Error;
   }
 }
+
 } // namespace wasminspector
