@@ -39,20 +39,19 @@ set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLVM_INCLUDE_UTILS OFF CACHE BOOL "" FORCE)
 set(LLVM_INCLUDE_BENCHMARKS OFF CACHE BOOL "" FORCE)
 set(LIBCLANG_BUILD_STATIC ON CACHE BOOL "" FORCE)
-add_subdirectory(llvm-project/llvm EXCLUDE_FROM_ALL)
+add_subdirectory($ENV{HOME}/wasm-toolchain/llvm-project/llvm llvm-project/llvm EXCLUDE_FROM_ALL)
 
-
-include_directories(llvm-project/llvm/include)
+include_directories($ENV{HOME}/wasm-toolchain/llvm-project/llvm/include)
 include_directories(${CMAKE_BINARY_DIR}/llvm-project/llvm/include)
-include_directories(llvm-project/clang/include)
+include_directories($ENV{HOME}/wasm-toolchain/llvm-project/clang/include)
 include_directories(${CMAKE_BINARY_DIR}/llvm-project/llvm/tools/clang/include)
-include_directories(llvm-project/lld/include)
+include_directories($ENV{HOME}/wasm-toolchain/llvm-project/lld/include)
 
 # wabt setups
 set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_LIBWASM OFF CACHE BOOL "" FORCE)
-include_directories(wabt/include)
-add_subdirectory(wabt EXCLUDE_FROM_ALL)
+include_directories($ENV{HOME}/wasm-toolchain/wabt/include)
+add_subdirectory($ENV{HOME}/wasm-toolchain/wabt wabt EXCLUDE_FROM_ALL)
 
 set(CLANG_LIBS clangFrontend clangDriver clangSerialization clangParse clangCodeGen clangSema clangAnalysis clangEdit clangAST clangLex clangBasic)
 set(LLD_LIBS lldCommon lldELF)
