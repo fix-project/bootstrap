@@ -2,9 +2,8 @@ file(GLOB LIB_SOURCES "*.cc")
 
 add_custom_command(
   OUTPUT "wasm-rt-content.h"
-  DEPENDS ${CMAKE_SOURCE_DIR}/wabt/wasm2c/wasm-rt.h
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/wasm_rt_content.py
-          ${CMAKE_SOURCE_DIR}/wabt/wasm2c/wasm-rt.h
+          $ENV{HOME}/wasm-toolchain/wabt/wasm2c/wasm-rt.h
           -o wasm-rt-content.h
 )
 
