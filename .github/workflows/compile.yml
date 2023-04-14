@@ -39,3 +39,22 @@ jobs:
             ./.fix/
             ./boot/
           if-no-files-found: error
+
+  release:
+      if: startsWith(github.ref, 'refs/tags/')
+      needs: ['build']
+      runs-on: ubuntu-latest
+      steps:
+      - name: "checkout repository"
+        uses: "actions/checkout@v2"
+        with:
+          submodules: 'recursive'
+      - name: Download artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: bootstrap
+          skip_unpack: true
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bootstrap.zip
