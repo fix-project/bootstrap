@@ -51,21 +51,22 @@ externref fixpoint_apply( externref encode )
   char* buffer = (char*)malloc( size_ro_mem_0() );
   ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
 
-  auto [c_outputs, h_header, h_impl_header, fixpoint_c] = wasm_to_c( buffer, size_ro_mem_0() );
+  auto [c_outputs, h_header, h_impl_header] = wasm_to_c( buffer, size_ro_mem_0() );
 
+  int c_written = 0;
   for ( int i = 0; i < 256; i++ ) {
     std::string c_output = c_outputs.at( i );
+    if ( c_output.rfind( "/* Empty wasm2c", 0 ) == 0 ) {
+      continue;
+    }
     grow_rw_0( ( c_output.size() >> 16 ) + 1 );
     program_memory_to_rw_0( 0, c_output.data(), c_output.size() );
     externref c_blob = create_blob_rw_mem_0( c_output.size() );
-    set_rw_table_1( i, c_blob );
+    set_rw_table_1( c_written, c_blob );
+    c_written++;
   }
 
-  grow_rw_0( ( fixpoint_c.size() >> 16 ) + 1 );
-  program_memory_to_rw_0( 0, fixpoint_c.data(), fixpoint_c.size() );
-  externref fixpoint_c_blob = create_blob_rw_mem_0( fixpoint_c.size() );
-  set_rw_table_1( 256, fixpoint_c_blob );
-  externref c_tree = create_tree_rw_table_1( 257 );
+  externref c_tree = create_tree_rw_table_1( c_written );
 
   grow_rw_0( ( h_header.size() >> 16 ) + 1 );
   program_memory_to_rw_0( 0, h_header.data(), h_header.size() );
