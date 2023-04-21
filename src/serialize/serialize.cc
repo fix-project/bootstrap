@@ -55,7 +55,7 @@ int main( int argc, char* argv[] )
     system_dep_tree.push_back( serialize_file( base_path, file_name ) );
   }
   Name system_dep_tree_name = serialize_tree( base_path, system_dep_tree );
-
+  
   vector<Name> clang_dep_tree;
   string resource_dir_path( argv[2] );
   for ( const char* file_name : clang_deps ) {
@@ -106,6 +106,13 @@ int main( int argc, char* argv[] )
     fout.close();
     index++;
   }
+
+  std::ofstream st_out( base_path + "boot/system-dep-tree" );
+  st_out << base64::encode( system_dep_tree_name );
+  st_out.close();
+  std::ofstream ct_out( base_path + "boot/clang-dep-tree" );
+  ct_out << base64::encode( clang_dep_tree_name );
+  ct_out.close();
 
   return 0;
 }
