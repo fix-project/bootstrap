@@ -50,10 +50,11 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: bootstrap
-          skip_unpack: true
+      - name: Show structure
+        run: ls -R
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
