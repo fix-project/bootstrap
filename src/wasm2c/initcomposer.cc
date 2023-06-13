@@ -191,6 +191,7 @@ private:
   void write_unsafe_io();
   void write_get_attached_tree();
   void write_get_attached_blob();
+  void write_equality();
 };
 
 void InitComposer::write_context()
@@ -379,6 +380,15 @@ void InitComposer::write_get_attached_blob()
   }
 }
 
+void InitComposer::write_equality()
+{
+  result_ << "extern uint32_t fixpoint_equality(__m256i, __m256i);" << endl;
+  result_ << "uint32_t " << ExportName( "fixpoint", "equality" )
+          << "(struct w2c_fixpoint* instance, __m256i lhs, __m256i rhs) {" << endl;
+  result_ << "  return fixpoint_equality( lhs, rhs );" << endl;
+  result_ << "}\n" << endl;
+}
+
 string InitComposer::compose_header()
 {
   result_ = ostringstream();
@@ -400,6 +410,7 @@ string InitComposer::compose_header()
   write_unsafe_io();
   write_get_attached_tree();
   write_get_attached_blob();
+  write_equality();
 
   result_ << "void initProgram(void* ptr) {" << endl;
   result_ << "  " << state_info_type_name_ << "* instance = (" << state_info_type_name_ << "*)ptr;" << endl;

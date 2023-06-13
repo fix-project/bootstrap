@@ -8,19 +8,19 @@
 #include "base64.hh"
 #include "depfile.h"
 #include "file_names.hh"
+#include "handle.hh"
 #include "mmap.hh"
-#include "name.hh"
 #include "wabt/sha256.h"
 
 using namespace std;
 namespace fs = std::filesystem;
 
-Name serialize_file( string base_path, string file_path )
+Handle serialize_file( string base_path, string file_path )
 {
   ReadOnlyFile file( file_path );
   string hash;
   wabt::sha256( file, hash );
-  Name blob_name( hash, file.length(), ContentType::Blob );
+  Handle blob_name( hash, file.length(), ContentType::Blob );
   string file_name = base64::encode( blob_name );
   ofstream fout( base_path + ".fix/" + file_name );
   fout << string_view( file );
@@ -28,12 +28,12 @@ Name serialize_file( string base_path, string file_path )
   return blob_name;
 }
 
-Name serialize_tree( string base_path, const vector<Name>& tree )
+Handle serialize_tree( string base_path, const vector<Handle>& tree )
 {
-  string_view view( reinterpret_cast<const char*>( tree.data() ), tree.size() * sizeof( Name ) );
+  string_view view( reinterpret_cast<const char*>( tree.data() ), tree.size() * sizeof( Handle ) );
   string hash;
   wabt::sha256( view, hash );
-  Name tree_name( hash, view.size(), ContentType::Tree );
+  Handle tree_name( hash, view.size(), ContentType::Tree );
   string file_name = base64::encode( tree_name );
   ofstream fout( base_path + ".fix/" + file_name );
   for ( auto name : tree ) {
@@ -43,6 +43,21 @@ Name serialize_tree( string base_path, const vector<Name>& tree )
   return tree_name;
 }
 
+Handle serialize_tag( string base_path, const vector<Handle>& tag )
+{
+  string_view view( reinterpret_cast<const char*>( tag.data() ), tag.size() * sizeof( Handle ) );
+  string hash;
+  wabt::sha256( view, hash );
+  Handle tag_name( hash, view.size(), ContentType::Tag );
+  string file_name = base64::encode( tag_name );
+  ofstream fout( base_path + ".fix/" + file_name );
+  for ( auto name : tag ) {
+    fout << base64::encode( name );
+  }
+  fout.close();
+  return tag_name;
+}
+
 int main( int argc, char* argv[] )
 {
   if ( argc != 3 ) {
@@ -50,45 +65,73 @@ int main( int argc, char* argv[] )
   }
 
   string base_path = string( argv[1] );
-  vector<Name> system_dep_tree;
+  vector<Handle> system_dep_tree;
   for ( const char* file_name : system_deps ) {
     system_dep_tree.push_back( serialize_file( base_path, file_name ) );
   }
-  Name system_dep_tree_name = serialize_tree( base_path, system_dep_tree );
-  
-  vector<Name> clang_dep_tree;
+  Handle system_dep_tree_name = serialize_tree( base_path, system_dep_tree );
+
+  vector<Handle> clang_dep_tree;
   string resource_dir_path( argv[2] );
   for ( const char* file_name : clang_deps ) {
     string file_path = resource_dir_path + get_base_name( file_name );
     clang_dep_tree.push_back( serialize_file( base_path, file_path.c_str() ) );
   }
-  Name clang_dep_tree_name = serialize_tree( base_path, clang_dep_tree );
+  Handle clang_dep_tree_name = serialize_tree( base_path, clang_dep_tree );
 
   array<string, 5> files = { "wasm-to-c-fix", "c-to-elf-fix", "link-elfs-fix", "map", "compile" };
-  vector<Name> wasm_names;
-  vector<Name> elf_names;
+  vector<Handle> wasm_names;
+  vector<Handle> elf_names;
   for ( auto file : files ) {
     wasm_names.push_back( serialize_file( base_path, base_path + "fix-build/src/fix-driver/" + file + ".wasm" ) );
     elf_names.push_back( serialize_file( base_path, base_path + "tmp/" + file + ".o" ) );
   }
 
-  // {compile.elf, wasm2c.elf, clang.elf, lld.elf, system_dep_tree, clang_dep_tree, map.elf }
-  vector<Name> compile_tool_tree;
-  compile_tool_tree.push_back( elf_names[4] );
-  compile_tool_tree.push_back( elf_names[0] );
-  compile_tool_tree.push_back( elf_names[1] );
-  compile_tool_tree.push_back( elf_names[2] );
+  vector<Handle> runnable_tags;
+  for ( size_t i = 0; i < 4; i++ ) {
+    vector<Handle> runnable_tag;
+    runnable_tag.push_back( elf_names[i] );
+    runnable_tag.push_back( elf_names[4] );
+    runnable_tag.push_back( Handle( "Runnable" ) );
+    runnable_tags.push_back( serialize_tag( base_path, runnable_tag ) );
+  }
+
+  vector<Handle> runnable_compile;
+  runnable_compile.push_back( elf_names[4] );
+  runnable_compile.push_back( elf_names[4] );
+  runnable_compile.push_back( Handle( "Runnable" ) );
+  Handle runnable_compile_name = serialize_tag( base_path, runnable_compile );
+
+  // {runnable-wasm2c.elf, runnable-clang.elf, runnable-lld.elf, system_dep_tree, clang_dep_tree, runnable-map.elf }
+  vector<Handle> compile_tool_tree;
+  compile_tool_tree.push_back( runnable_tags[0] );
+  compile_tool_tree.push_back( runnable_tags[1] );
+  compile_tool_tree.push_back( runnable_tags[2] );
   compile_tool_tree.push_back( system_dep_tree_name );
   compile_tool_tree.push_back( clang_dep_tree_name );
-  compile_tool_tree.push_back( elf_names[3] );
-  Name compile_tool_tree_name = serialize_tree( base_path, compile_tool_tree );
+  compile_tool_tree.push_back( runnable_tags[3] );
+  Handle compile_tool_tree_name = serialize_tree( base_path, compile_tool_tree );
+
+  // Tag compile_tool_tree bootstrap
+  vector<Handle> compile_tool_tree_tag;
+  compile_tool_tree_tag.push_back( compile_tool_tree_name );
+  compile_tool_tree_tag.push_back( elf_names[4] );
+  compile_tool_tree_tag.push_back( Handle( "Bootstrap" ) );
+  Handle compile_tool_tree_tag_name = serialize_tag( base_path, compile_tool_tree_tag );
+
+  // Encode: {r, runnable-compile.elf, tagged-compile-tool-tree}
+  vector<Handle> compile_encode;
+  compile_encode.push_back( Handle( "unused" ) );
+  compile_encode.push_back( runnable_compile_name );
+  compile_encode.push_back( compile_tool_tree_tag_name );
+  Handle compile_encode_name = serialize_tag( base_path, compile_encode );
 
   if ( !fs::exists( base_path + "boot" ) ) {
     fs::create_directory( base_path + "boot" );
   }
 
-  std::ofstream compile_tool_out( base_path + "boot/compile-tool" );
-  compile_tool_out << base64::encode( compile_tool_tree_name );
+  std::ofstream compile_tool_out( base_path + "boot/compile-encode" );
+  compile_tool_out << base64::encode( compile_encode_name );
   compile_tool_out.close();
 
   size_t index = 0;

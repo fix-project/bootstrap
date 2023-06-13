@@ -25,14 +25,14 @@ extern externref get_ro_table_1( int32_t )
 extern void attach_tree_ro_table_1( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_1" ) ) );
 
-// resource_limits | { clang | system_dep | clang_dep } | { h_impl | h } | c
+// resource_limits | { resource_limits | clang | system_dep | clang_dep } | { h_impl | h } | c
 externref fixpoint_apply( externref encode )
 {
   attach_tree_ro_table_0( encode );
   attach_tree_ro_table_1( get_ro_table_0( 1 ) );
 
-  externref system_dep_tree = get_ro_table_1( 1 );
-  externref clang_dep_tree = get_ro_table_1( 2 );
+  externref system_dep_tree = get_ro_table_1( 2 );
+  externref clang_dep_tree = get_ro_table_1( 3 );
 
   attach_tree_ro_table_1( system_dep_tree );
   char* system_dep_files[63];
