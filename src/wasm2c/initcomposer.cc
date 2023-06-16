@@ -192,6 +192,7 @@ private:
   void write_get_attached_tree();
   void write_get_attached_blob();
   void write_equality();
+  void write_create_tag();
 };
 
 void InitComposer::write_context()
@@ -389,6 +390,15 @@ void InitComposer::write_equality()
   result_ << "}\n" << endl;
 }
 
+void InitComposer::write_create_tag()
+{
+  result_ << "extern __m256i fixpoint_create_tag(__m256i, __m256i);" << endl;
+  result_ << "__m256i " << ExportName( "fixpoint", "create_tag" )
+          << "(struct w2c_fixpoint* instance, __m256i value, __m256i constructor) {" << endl;
+  result_ << "  return fixpoint_create_tag( value, constructor );" << endl;
+  result_ << "}\n" << endl;
+}
+
 string InitComposer::compose_header()
 {
   result_ = ostringstream();
@@ -411,6 +421,7 @@ string InitComposer::compose_header()
   write_get_attached_tree();
   write_get_attached_blob();
   write_equality();
+  write_create_tag();
 
   result_ << "void initProgram(void* ptr) {" << endl;
   result_ << "  " << state_info_type_name_ << "* instance = (" << state_info_type_name_ << "*)ptr;" << endl;
