@@ -193,6 +193,8 @@ private:
   void write_get_attached_blob();
   void write_equality();
   void write_create_tag();
+  void write_get_length();
+  void write_get_total_size();
 };
 
 void InitComposer::write_context()
@@ -399,6 +401,24 @@ void InitComposer::write_create_tag()
   result_ << "}\n" << endl;
 }
 
+void InitComposer::write_get_length()
+{
+  result_ << "extern uint32_t fixpoint_get_length(__m256i);" << endl;
+  result_ << "uint32_t " << ExportName( "fixpoint", "get_length" )
+          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
+  result_ << "  return fixpoint_get_length( handle );" << endl;
+  result_ << "}\n" << endl;
+}
+
+void InitComposer::write_get_total_size()
+{
+  result_ << "extern uint32_t fixpoint_get_total_size(__m256i);" << endl;
+  result_ << "uint32_t " << ExportName( "fixpoint", "get_total_size" )
+          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
+  result_ << "  return fixpoint_get_total_size( handle );" << endl;
+  result_ << "}\n" << endl;
+}
+
 string InitComposer::compose_header()
 {
   result_ = ostringstream();
@@ -422,6 +442,8 @@ string InitComposer::compose_header()
   write_get_attached_blob();
   write_equality();
   write_create_tag();
+  write_get_length();
+  write_get_total_size();
 
   result_ << "void initProgram(void* ptr) {" << endl;
   result_ << "  " << state_info_type_name_ << "* instance = (" << state_info_type_name_ << "*)ptr;" << endl;
