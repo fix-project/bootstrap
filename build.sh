@@ -5,6 +5,10 @@
 # cmake --build fix-build
 
 progress_bar() {
+  if [ -z $TERM ]
+  then
+    return
+  fi
   msg=$1
   completed=$2
   in_progress=$3
