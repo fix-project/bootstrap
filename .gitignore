@@ -1,1 +1,5 @@
-/build
+/.fix/
+/boot/
+/fix-build/
+/tmp/
+/build/
