@@ -23,7 +23,7 @@ if(NOT BUILD_SYS_DRIVER)
   set(CMAKE_RANLIB ${WASI_SDK}/bin/llvm-ranlib)
   LIST(APPEND CMAKE_PROGRAM_PATH ${WASI_SDK}/bin)
   set(CMAKE_C_FLAGS "-I${WASIX_DIR}/include -I${WASI_SDK}/include -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN -L${WASIX_DIR}/lib -lwasix -L${WASI_SDK}/lib -L${WASI_SDK}/lib/wasm32-wasi -lwasi-emulated-signal -lwasi-emulated-mman -z stack-size=1048576")
-  set(CMAKE_CXX_FLAGS "-I${WASIX_DIR}/include -I${WASI_SDK}/include -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN -D_LIBCPP_NO_EXCEPTIONS -D_LIBCXXABI_NO_EXCEPTIONS -fno-exceptions -mreference-types")
+  set(CMAKE_CXX_FLAGS "-I${WASIX_DIR}/include -I${WASI_SDK}/include -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_MMAN -D_LIBCPP_HAS_NO_EXCEPTIONS -D_LIBCXXABI_NO_EXCEPTIONS -fno-exceptions -mreference-types -include ${CMAKE_SOURCE_DIR}/src/fix-driver/ifstream-stub.hh")
   add_link_options(-L${WASIX_DIR}/lib -lwasix -L${WASI_SDK}/lib -L${WASI_SDK}/lib/wasm32-wasi -lwasi-emulated-signal -lwasi-emulated-mman -z stack-size=1048576)
 endif()
 
@@ -32,6 +32,7 @@ project(bootstrap)
 include(etc/build_type.cmake)
 
 # LLVM setups
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON CACHE BOOL "" FORCE)
 set(LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "" FORCE)
 set(LLVM_TARGET_ARCH "x86_64" CACHE STRING "" FORCE)
 set(LLVM_DEFAULT_TARGET_TRIPLE "x86_64-pc-linux-gnu" CACHE STRING "" FORCE)

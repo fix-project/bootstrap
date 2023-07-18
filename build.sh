@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # cmake -S . -B build
 # cmake --build build
 # cmake -S . -B fix-build -DBUILD_SYS_DRIVER=OFF
@@ -52,7 +52,7 @@ for task in ${Tasks}; do
   echo "Compiling $task to ELF..."
   for i in {0..255}
   do
-    "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/16.0.0/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
+    "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/18/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
     running=$(jobs -r | wc -l)
     if [ "$running" -ge $(("$PARALLEL"-1)) ]
     then

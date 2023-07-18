@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "c-to-elf.hh"
-#include "depfile.h"
+#include "depfile.hh"
 #include "file_names.hh"
 #include "mmap.hh"
 
@@ -21,21 +21,17 @@ int main( int argc, char* argv[] )
   ReadOnlyFile h_content { argv[3] };
 
   std::vector<ReadOnlyFile> system_dep_files;
-  char* system_dep_content[63];
-  size_t dep_index = 0;
+  std::vector<char*> system_dep_content;
   for ( auto system_dep_path : system_deps ) {
     system_dep_files.push_back( ReadOnlyFile( system_dep_path ) );
-    system_dep_content[dep_index] = system_dep_files.back().addr();
-    dep_index++;
+    system_dep_content.push_back( system_dep_files.back().addr() );
   }
-  dep_index = 0;
   std::vector<ReadOnlyFile> clang_dep_files;
-  char* clang_dep_content[93];
+  std::vector<char*> clang_dep_content;
   for ( auto clang_dep_path : clang_deps ) {
     std::string resource_dir_path = std::string( argv[4] ) + get_base_name( clang_dep_path );
     clang_dep_files.push_back( ReadOnlyFile( resource_dir_path ) );
-    clang_dep_content[dep_index] = clang_dep_files.back().addr();
-    dep_index++;
+    clang_dep_content.push_back( clang_dep_files.back().addr() );
   }
 
   string elf_res

@@ -6,7 +6,7 @@
 #include <string>
 
 #include "base64.hh"
-#include "depfile.h"
+#include "depfile.hh"
 #include "file_names.hh"
 #include "handle.hh"
 #include "mmap.hh"

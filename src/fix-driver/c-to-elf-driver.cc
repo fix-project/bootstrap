@@ -22,6 +22,8 @@ extern void attach_tree_ro_table_0( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_0" ) ) );
 extern externref get_ro_table_1( int32_t )
   __attribute__( ( import_module( "asm" ), import_name( "get_ro_table_1" ) ) );
+extern size_t size_ro_table_1( void )
+  __attribute__( ( import_module( "asm" ), import_name( "size_ro_table_1" ) ) );
 extern void attach_tree_ro_table_1( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_1" ) ) );
 
@@ -35,23 +37,23 @@ externref fixpoint_apply( externref encode )
   externref clang_dep_tree = get_ro_table_1( 3 );
 
   attach_tree_ro_table_1( system_dep_tree );
-  char* system_dep_files[63];
-  for ( size_t i = 0; i < 63; i++ ) {
+  std::vector<char*> system_dep_files;
+  for ( size_t i = 0; i < size_ro_table_1(); i++ ) {
     attach_blob_ro_mem_0( get_ro_table_1( i ) );
     char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
     ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
     buffer[size_ro_mem_0()] = '\0';
-    system_dep_files[i] = buffer;
+    system_dep_files.push_back( buffer );
   }
 
   attach_tree_ro_table_1( clang_dep_tree );
-  char* clang_dep_files[93];
-  for ( size_t i = 0; i < 93; i++ ) {
+  std::vector<char*> clang_dep_files;
+  for ( size_t i = 0; i < size_ro_table_1(); i++ ) {
     attach_blob_ro_mem_0( get_ro_table_1( i ) );
     char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
     ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
     buffer[size_ro_mem_0()] = '\0';
-    clang_dep_files[i] = buffer;
+    clang_dep_files.push_back( buffer );
   }
 
   attach_tree_ro_table_1( get_ro_table_0( 2 ) );

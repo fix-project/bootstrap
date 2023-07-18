@@ -7,20 +7,20 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/VirtualFileSystem.h>
+#include <llvm/TargetParser/Host.h>
 
 #include "cc1args.h"
-#include "depfile.h"
+#include "depfile.hh"
 #include "wasm-rt-content.h"
 
 using namespace std;
 using namespace clang;
 using namespace llvm;
 
-string c_to_elf( char* system_dep_files[],
-                 char* clang_dep_files[],
+string c_to_elf( const vector<char*>& system_dep_files,
+                 const vector<char*>& clang_dep_files,
                  char* function_c_buffer,
                  char* function_h_impl_buffer,
                  char* function_h_buffer )
@@ -44,12 +44,12 @@ string c_to_elf( char* system_dep_files[],
   // Create File System
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemFS( new vfs::InMemoryFileSystem() );
 
-  for ( size_t i = 0; i < 63; i++ ) {
-    InMemFS->addFile( system_deps[i], 0, MemoryBuffer::getMemBuffer( system_dep_files[i] ) );
+  for ( size_t i = 0; i < system_deps.size(); i++ ) {
+    InMemFS->addFile( system_deps.at( i ), 0, MemoryBuffer::getMemBuffer( system_dep_files.at( i ) ) );
   }
 
-  for ( size_t i = 0; i < 93; i++ ) {
-    InMemFS->addFile( clang_deps[i], 0, MemoryBuffer::getMemBuffer( clang_dep_files[i] ) );
+  for ( size_t i = 0; i < clang_deps.size(); i++ ) {
+    InMemFS->addFile( clang_deps.at( i ), 0, MemoryBuffer::getMemBuffer( clang_dep_files.at( i ) ) );
   }
 
   InMemFS->addFile( "/fix/function.c", 0, MemoryBuffer::getMemBuffer( function_c_buffer ) );
@@ -97,6 +97,7 @@ string c_to_elf( char* system_dep_files[],
                      compilerInstance.getTarget().getDataLayoutString(),
                      module.get(),
                      Backend_EmitObj,
+                     InMemFS,
                      std::move( OS ) );
 
   return llvm_res;

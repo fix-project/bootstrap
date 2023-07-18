@@ -2,7 +2,7 @@ add_link_options(-nostdlib -Wl,--no-entry -Wl,--allow-undefined
                  $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++.a
                  $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++abi.a
                  $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc.a
-                 $ENV{HOME}/wasm-toolchain/sysroot/lib/clang/16.0.0/lib/wasi/libclang_rt.builtins-wasm32.a)
+                 $ENV{HOME}/wasm-toolchain/sysroot/lib/clang/18/lib/wasi/libclang_rt.builtins-wasm32.a)
 
 add_library(stub-obj OBJECT "stubs.c")
 
