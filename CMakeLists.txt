@@ -7,6 +7,14 @@ set(WASIX_DIR $ENV{HOME}/wasm-toolchain/sysroot/wasix)
 
 option(BUILD_SYS_DRIVER "Build local machine version" ON)
 
+find_program(CCACHE ccache)
+
+if(CCACHE)
+  set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+  message(STATUS "Using ${CCACHE} as compiler launcher.")
+endif(CCACHE)
+
 # Use compiler from wasm-toolchain if building to wasm
 if(NOT BUILD_SYS_DRIVER)
   set(CMAKE_C_COMPILER ${WASI_SDK}/bin/clang)
