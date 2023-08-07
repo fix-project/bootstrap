@@ -65,6 +65,7 @@ return b{
   $ boot:VB: boot/compile-encode
 
   $ boot/% .fix/%: $obj $(tools.serialize)
+    mkdir -p .fix
     $(tools.serialize) ./ $llvm_include
 
 } + rules

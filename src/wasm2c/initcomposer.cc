@@ -187,7 +187,6 @@ private:
   void write_create_thunk();
   void write_init_read_only_mem_table();
   void write_get_instance_size();
-  void write_context();
   void write_unsafe_io();
   void write_get_attached_tree();
   void write_get_attached_blob();
@@ -196,18 +195,6 @@ private:
   void write_get_length();
   void write_get_total_size();
 };
-
-void InitComposer::write_context()
-{
-  result_ << "typedef struct Context {" << endl;
-  result_ << "  __m256i return_value;" << endl;
-  result_ << "  size_t memory_usage;" << endl;
-  result_ << "} Context;\n" << endl;
-
-  result_ << "Context* get_context_ptr( void* instance ) {" << endl;
-  result_ << "  return (Context*)((char*)instance + get_instance_size());" << endl;
-  result_ << "}\n" << endl;
-}
 
 void InitComposer::write_attach_tree()
 {
@@ -426,24 +413,34 @@ string InitComposer::compose_header()
   result_ << "#include \"" << wasm_name_ << ".h\"" << endl;
   result_ << endl;
 
-  write_get_instance_size();
-  write_context();
-  write_init_read_only_mem_table();
-  write_attach_tree();
   write_attach_blob();
-  write_memory_size();
-  write_create_tree();
+  write_attach_tree();
   write_create_blob();
-  write_create_blob_i32();
-  write_value_type();
-  write_create_thunk();
-  write_unsafe_io();
-  write_get_attached_tree();
+  write_create_tree();
   write_get_attached_blob();
-  write_equality();
-  write_create_tag();
-  write_get_length();
-  write_get_total_size();
+  write_get_attached_tree();
+  write_get_instance_size();
+  write_init_read_only_mem_table();
+  write_memory_size();
+
+  unordered_map<string, std::function<void( InitComposer* )>> fn_writers = {
+    { "create_blob_i32", &InitComposer::write_create_blob_i32 },
+    { "create_tag", &InitComposer::write_create_tag },
+    { "create_thunk", &InitComposer::write_create_thunk },
+    { "equality", &InitComposer::write_equality },
+    { "get_length", &InitComposer::write_get_length },
+    { "get_total_size", &InitComposer::write_get_total_size },
+    { "unsafe_io", &InitComposer::write_unsafe_io },
+    { "value_type", &InitComposer::write_value_type },
+  };
+
+  const auto& fns = inspector_->GetImportedFunctions();
+
+  for ( const auto& f : fn_writers ) {
+    if ( fns.find( f.first ) != fns.end() ) {
+      f.second( this );
+    }
+  }
 
   result_ << "void initProgram(void* ptr) {" << endl;
   result_ << "  " << state_info_type_name_ << "* instance = (" << state_info_type_name_ << "*)ptr;" << endl;
