@@ -33,7 +33,7 @@ Handle serialize_tree( string base_path, const vector<Handle>& tree )
   string_view view( reinterpret_cast<const char*>( tree.data() ), tree.size() * sizeof( Handle ) );
   string hash;
   wabt::sha256( view, hash );
-  Handle tree_name( hash, view.size(), ContentType::Tree );
+  Handle tree_name( hash, view.size() / sizeof( Handle ), ContentType::Tree );
   string file_name = base64::encode( tree_name );
   ofstream fout( base_path + ".fix/" + file_name );
   for ( auto name : tree ) {
@@ -48,7 +48,7 @@ Handle serialize_tag( string base_path, const vector<Handle>& tag )
   string_view view( reinterpret_cast<const char*>( tag.data() ), tag.size() * sizeof( Handle ) );
   string hash;
   wabt::sha256( view, hash );
-  Handle tag_name( hash, view.size(), ContentType::Tag );
+  Handle tag_name( hash, view.size() / sizeof( Handle ), ContentType::Tag );
   string file_name = base64::encode( tag_name );
   ofstream fout( base_path + ".fix/" + file_name );
   for ( auto name : tag ) {
