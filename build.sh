@@ -5,7 +5,7 @@
 # cmake --build fix-build
 
 progress_bar() {
-  if [ -z $TERM ]
+  if [ ! -v $TERM ]
   then
     return
   fi
