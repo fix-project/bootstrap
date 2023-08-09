@@ -15,7 +15,7 @@ if cli.cmake_build_type then
   configure_flags = configure_flags .. "-DCMAKE_BUILD_TYPE=" .. cli.cmake_build_type
 end
 
-local llvm_include="build/llvm-project/llvm/lib/clang/16.0.0/include/"
+local llvm_include="build/llvm-project/llvm/lib/clang/18/include/"
 
 rules = b{}
 for _, step in pairs(fix_steps) do
@@ -47,7 +47,7 @@ return b{
   $ all:V: boot
 
   $ build/CMakeCache.txt:
-    cmake -B build -S . $configure_flags
+    cmake -B build -S . $configure_flags -G Ninja
 
   $ build:VB: build/CMakeCache.txt
     cmake --build build -j $$(nproc)
@@ -55,7 +55,7 @@ return b{
   $ build/%:B: build
 
   $ fix-build/CMakeCache.txt:
-    cmake -B fix-build -DBUILD_SYS_DRIVER=OFF -S . $configure_flags
+    cmake -B fix-build -DBUILD_SYS_DRIVER=OFF -S . $configure_flags -G Ninja
 
   $ fix-build:VB: fix-build/CMakeCache.txt
     cmake --build fix-build -j $$(nproc)
@@ -65,7 +65,8 @@ return b{
   $ boot:VB: boot/compile-encode
 
   $ boot/% .fix/%: $obj $(tools.serialize)
-    mkdir -p .fix
+    rm -rf boot .fix
+    mkdir -p boot .fix
     $(tools.serialize) ./ $llvm_include
 
 } + rules
