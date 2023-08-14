@@ -192,6 +192,7 @@ private:
   void write_get_attached_blob();
   void write_equality();
   void write_create_tag();
+  void write_get_access();
   void write_get_length();
   void write_get_total_size();
 };
@@ -388,6 +389,15 @@ void InitComposer::write_create_tag()
   result_ << "}\n" << endl;
 }
 
+void InitComposer::write_get_access()
+{
+  result_ << "extern uint32_t fixpoint_get_access(__m256i);" << endl;
+  result_ << "uint32_t " << ExportName( "fixpoint", "get_access" )
+          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
+  result_ << "  return fixpoint_get_access( handle );" << endl;
+  result_ << "}\n" << endl;
+}
+
 void InitComposer::write_get_length()
 {
   result_ << "extern uint32_t fixpoint_get_length(__m256i);" << endl;
@@ -428,6 +438,7 @@ string InitComposer::compose_header()
     { "create_tag", &InitComposer::write_create_tag },
     { "create_thunk", &InitComposer::write_create_thunk },
     { "equality", &InitComposer::write_equality },
+    { "get_access", &InitComposer::write_get_access },
     { "get_length", &InitComposer::write_get_length },
     { "get_total_size", &InitComposer::write_get_total_size },
     { "unsafe_io", &InitComposer::write_unsafe_io },
