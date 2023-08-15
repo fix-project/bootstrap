@@ -194,7 +194,8 @@ private:
   void write_create_tag();
   void write_get_access();
   void write_get_length();
-  void write_get_total_size();
+  void write_unsafe_try_lift();
+  void write_lower();
 };
 
 void InitComposer::write_attach_tree()
@@ -407,12 +408,21 @@ void InitComposer::write_get_length()
   result_ << "}\n" << endl;
 }
 
-void InitComposer::write_get_total_size()
+void InitComposer::write_unsafe_try_lift()
 {
-  result_ << "extern uint32_t fixpoint_get_total_size(__m256i);" << endl;
-  result_ << "uint32_t " << ExportName( "fixpoint", "get_total_size" )
+  result_ << "extern __m256i fixpoint_unsafe_try_lift(__m256i);" << endl;
+  result_ << "__m256i " << ExportName( "fixpoint", "unsafe_try_lift" )
           << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
-  result_ << "  return fixpoint_get_total_size( handle );" << endl;
+  result_ << "  return fixpoint_unsafe_try_lift( handle );" << endl;
+  result_ << "}\n" << endl;
+}
+
+void InitComposer::write_lower()
+{
+  result_ << "extern __m256i fixpoint_lower(__m256i);" << endl;
+  result_ << "__m256i " << ExportName( "fixpoint", "lower" ) << "(struct w2c_fixpoint* instance, __m256i handle) {"
+          << endl;
+  result_ << "  return fixpoint_lower( handle );" << endl;
   result_ << "}\n" << endl;
 }
 
@@ -440,9 +450,10 @@ string InitComposer::compose_header()
     { "equality", &InitComposer::write_equality },
     { "get_access", &InitComposer::write_get_access },
     { "get_length", &InitComposer::write_get_length },
-    { "get_total_size", &InitComposer::write_get_total_size },
     { "unsafe_io", &InitComposer::write_unsafe_io },
     { "value_type", &InitComposer::write_value_type },
+    { "unsafe_try_lift", &InitComposer::write_unsafe_try_lift },
+    { "lower", &InitComposer::write_lower },
   };
 
   const auto& fns = inspector_->GetImportedFunctions();
