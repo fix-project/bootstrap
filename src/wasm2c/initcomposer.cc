@@ -181,21 +181,20 @@ private:
   void write_attach_blob();
   void write_memory_size();
   void write_create_blob();
-  void write_create_blob_i32();
-  void write_value_type();
   void write_create_tree();
-  void write_create_thunk();
   void write_init_read_only_mem_table();
   void write_get_instance_size();
   void write_unsafe_io();
   void write_get_attached_tree();
   void write_get_attached_blob();
-  void write_equality();
-  void write_create_tag();
-  void write_get_access();
-  void write_get_length();
-  void write_unsafe_try_lift();
-  void write_lower();
+
+  struct function
+  {
+    string return_type;
+    string name;
+    vector<string> parameter_types;
+  };
+  void write_function( function fn );
 };
 
 void InitComposer::write_attach_tree()
@@ -254,24 +253,6 @@ void InitComposer::write_create_blob()
   }
 }
 
-void InitComposer::write_create_blob_i32()
-{
-  result_ << "extern __m256i fixpoint_create_blob_i32( uint32_t );" << endl;
-  result_ << "__m256i " << ExportName( "fixpoint", "create_blob_i32" )
-          << "(struct w2c_fixpoint* instance, uint32_t content) {" << endl;
-  result_ << "  return fixpoint_create_blob_i32( content );" << endl;
-  result_ << "}\n" << endl;
-}
-
-void InitComposer::write_value_type()
-{
-  result_ << "extern uint32_t fixpoint_value_type( __m256i );" << endl;
-  result_ << "uint32_t " << ExportName( "fixpoint", "value_type" )
-          << "(struct w2c_fixpoint* instance, __m256i handle ) {" << endl;
-  result_ << "  return fixpoint_value_type( handle );" << endl;
-  result_ << "}\n" << endl;
-}
-
 void InitComposer::write_create_tree()
 {
   auto rw_tables = inspector_->GetExportedRWTables();
@@ -285,15 +266,6 @@ void InitComposer::write_create_tree()
     result_ << "  return fixpoint_create_tree(rw_table, size);" << endl;
     result_ << "}\n" << endl;
   }
-}
-
-void InitComposer::write_create_thunk()
-{
-  result_ << "extern __m256i fixpoint_create_thunk(__m256i);" << endl;
-  result_ << "__m256i " << ExportName( "fixpoint", "create_thunk" )
-          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
-  result_ << "  return fixpoint_create_thunk(handle);" << endl;
-  result_ << "}\n" << endl;
 }
 
 void InitComposer::write_init_read_only_mem_table()
@@ -372,57 +344,35 @@ void InitComposer::write_get_attached_blob()
   }
 }
 
-void InitComposer::write_equality()
+struct function
 {
-  result_ << "extern uint32_t fixpoint_equality(__m256i, __m256i);" << endl;
-  result_ << "uint32_t " << ExportName( "fixpoint", "equality" )
-          << "(struct w2c_fixpoint* instance, __m256i lhs, __m256i rhs) {" << endl;
-  result_ << "  return fixpoint_equality( lhs, rhs );" << endl;
-  result_ << "}\n" << endl;
-}
+  string return_type;
+  string name;
+  vector<string> parameter_types;
+};
 
-void InitComposer::write_create_tag()
+void InitComposer::write_function( function fn )
 {
-  result_ << "extern __m256i fixpoint_create_tag(__m256i, __m256i);" << endl;
-  result_ << "__m256i " << ExportName( "fixpoint", "create_tag" )
-          << "(struct w2c_fixpoint* instance, __m256i value, __m256i constructor) {" << endl;
-  result_ << "  return fixpoint_create_tag( value, constructor );" << endl;
-  result_ << "}\n" << endl;
-}
+  result_ << "extern " << fn.return_type << " fixpoint_" << fn.name << "(";
+  for ( size_t i = 0; i < fn.parameter_types.size(); i++ ) {
+    if ( i > 0 )
+      result_ << ", ";
+    result_ << fn.parameter_types[i];
+  }
+  result_ << ");" << endl;
 
-void InitComposer::write_get_access()
-{
-  result_ << "extern uint32_t fixpoint_get_access(__m256i);" << endl;
-  result_ << "uint32_t " << ExportName( "fixpoint", "get_access" )
-          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
-  result_ << "  return fixpoint_get_access( handle );" << endl;
-  result_ << "}\n" << endl;
-}
-
-void InitComposer::write_get_length()
-{
-  result_ << "extern uint32_t fixpoint_get_length(__m256i);" << endl;
-  result_ << "uint32_t " << ExportName( "fixpoint", "get_length" )
-          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
-  result_ << "  return fixpoint_get_length( handle );" << endl;
-  result_ << "}\n" << endl;
-}
-
-void InitComposer::write_unsafe_try_lift()
-{
-  result_ << "extern __m256i fixpoint_unsafe_try_lift(__m256i);" << endl;
-  result_ << "__m256i " << ExportName( "fixpoint", "unsafe_try_lift" )
-          << "(struct w2c_fixpoint* instance, __m256i handle) {" << endl;
-  result_ << "  return fixpoint_unsafe_try_lift( handle );" << endl;
-  result_ << "}\n" << endl;
-}
-
-void InitComposer::write_lower()
-{
-  result_ << "extern __m256i fixpoint_lower(__m256i);" << endl;
-  result_ << "__m256i " << ExportName( "fixpoint", "lower" ) << "(struct w2c_fixpoint* instance, __m256i handle) {"
-          << endl;
-  result_ << "  return fixpoint_lower( handle );" << endl;
+  result_ << fn.return_type << " " << ExportName( "fixpoint", fn.name ) << "(struct w2c_fixpoint *instance";
+  for ( size_t i = 0; i < fn.parameter_types.size(); i++ ) {
+    result_ << ", " << fn.parameter_types[i] << " x" << i;
+  }
+  result_ << ") {" << endl;
+  result_ << "  return fixpoint_" << fn.name << "(";
+  for ( size_t i = 0; i < fn.parameter_types.size(); i++ ) {
+    if ( i > 0 )
+      result_ << ", ";
+    result_ << "x" << i;
+  }
+  result_ << ");" << endl;
   result_ << "}\n" << endl;
 }
 
@@ -442,25 +392,33 @@ string InitComposer::compose_header()
   write_get_instance_size();
   write_init_read_only_mem_table();
   write_memory_size();
+  write_unsafe_io();
 
-  unordered_map<string, std::function<void( InitComposer* )>> fn_writers = {
-    { "create_blob_i32", &InitComposer::write_create_blob_i32 },
-    { "create_tag", &InitComposer::write_create_tag },
-    { "create_thunk", &InitComposer::write_create_thunk },
-    { "equality", &InitComposer::write_equality },
-    { "get_access", &InitComposer::write_get_access },
-    { "get_length", &InitComposer::write_get_length },
-    { "unsafe_io", &InitComposer::write_unsafe_io },
-    { "value_type", &InitComposer::write_value_type },
-    { "unsafe_try_lift", &InitComposer::write_unsafe_try_lift },
-    { "lower", &InitComposer::write_lower },
+  vector<function> fns = {
+    { "__m256i", "create_blob_i32", { "uint32_t" } },
+    { "__m256i", "create_blob_i32", { "uint32_t" } },
+    { "__m256i", "create_tag", { "__m256i", "__m256i" } },
+    { "__m256i", "create_thunk", { "__m256i" } },
+    { "__m256i", "debug_try_evaluate", { "__m256i" } },
+    { "__m256i", "debug_try_inspect", { "__m256i" } },
+    { "__m256i", "debug_try_lift", { "__m256i" } },
+    { "uint32_t", "equality", { "__m256i", "__m256i" } },
+    { "__m256i", "lower", { "__m256i" } },
+    { "uint32_t", "get_access", { "__m256i" } },
+    { "uint32_t", "get_length", { "__m256i" } },
+    { "uint32_t", "get_value_type", { "__m256i" } },
   };
 
-  const auto& fns = inspector_->GetImportedFunctions();
+  unordered_map<string, function> fns_map {};
+  for ( const auto& fn : fns ) {
+    fns_map.insert( std::make_pair( fn.name, fn ) );
+  }
 
-  for ( const auto& f : fn_writers ) {
-    if ( fns.find( f.first ) != fns.end() ) {
-      f.second( this );
+  const auto& imported = inspector_->GetImportedFunctions();
+
+  for ( const auto& f : fns_map ) {
+    if ( imported.find( f.first ) != imported.end() ) {
+      write_function( f.second );
     }
   }
 
