@@ -19,7 +19,7 @@ int main( int argc, char* argv[] )
   }
   ReadOnlyFile wasm_content { argv[1] };
 
-  auto [c_outputs, h_header, h_impl_header] = wasm_to_c( wasm_content.addr(), wasm_content.length() );
+  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( wasm_content.addr(), wasm_content.length() );
 
   for ( unsigned int i = 0; i < NUM_OUTPUT; i++ ) {
     ofstream fout_c( output_path + "function" + std::to_string( i ) + ".c" );
@@ -34,6 +34,11 @@ int main( int argc, char* argv[] )
   ofstream fout_h( output_path + "function.h" );
   fout_h << h_header;
   fout_h.close();
+
+  if ( errors ) {
+    cerr << *errors << endl;
+    return 1;
+  }
 
   return 0;
 }

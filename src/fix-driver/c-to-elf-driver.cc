@@ -22,8 +22,7 @@ extern void attach_tree_ro_table_0( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_0" ) ) );
 extern externref get_ro_table_1( int32_t )
   __attribute__( ( import_module( "asm" ), import_name( "get_ro_table_1" ) ) );
-extern size_t size_ro_table_1( void )
-  __attribute__( ( import_module( "asm" ), import_name( "size_ro_table_1" ) ) );
+extern size_t size_ro_table_1( void ) __attribute__( ( import_module( "asm" ), import_name( "size_ro_table_1" ) ) );
 extern void attach_tree_ro_table_1( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_1" ) ) );
 
@@ -76,7 +75,10 @@ externref fixpoint_apply( externref encode )
   ro_0_to_program_memory( c_buffer, 0, size_ro_mem_0() );
   c_buffer[size_ro_mem_0()] = '\0';
 
-  std::string res = c_to_elf( system_dep_files, clang_dep_files, c_buffer, h_impl_buffer, h_buffer );
+  std::pair<bool, std::string> result
+    = c_to_elf( system_dep_files, clang_dep_files, c_buffer, h_impl_buffer, h_buffer );
+
+  std::string res = result.second;
 
   if ( ( res.size() >> 16 ) > 0 ) {
     grow_rw_0( res.size() >> 16 );

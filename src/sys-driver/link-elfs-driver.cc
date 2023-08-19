@@ -25,13 +25,17 @@ int main( int argc, char* argv[] )
     dep_file_sizes.push_back( file.length() );
   }
 
-  string res = link_elfs( dep_files, dep_file_sizes );
+  auto [success, res] = link_elfs( dep_files, dep_file_sizes );
   ofstream fout( argv[1] );
   fout << res;
   fout.close();
 
   for ( auto ptr : dep_files ) {
     free( ptr );
+  }
+
+  if ( not success ) {
+    return 1;
   }
   return 0;
 }

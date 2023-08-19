@@ -19,11 +19,11 @@ using namespace std;
 using namespace clang;
 using namespace llvm;
 
-string c_to_elf( const vector<char*>& system_dep_files,
-                 const vector<char*>& clang_dep_files,
-                 char* function_c_buffer,
-                 char* function_h_impl_buffer,
-                 char* function_h_buffer )
+pair<bool, string> c_to_elf( const vector<char*>& system_dep_files,
+                             const vector<char*>& clang_dep_files,
+                             char* function_c_buffer,
+                             char* function_h_impl_buffer,
+                             char* function_h_buffer )
 {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -64,7 +64,7 @@ string c_to_elf( const vector<char*>& system_dep_files,
 
   auto compilerInvocation = std::make_shared<CompilerInvocation>();
   if ( !CompilerInvocation::CreateFromArgs( *compilerInvocation, cc1args, *diagEngine ) ) {
-    return diagOS.str() + "\nFailed to create compiler invocation.\n";
+    return make_pair( false, diagOS.str() + "\nFailed to create compiler invocation.\n" );
   }
 
   LLVMContext context;
@@ -77,12 +77,12 @@ string c_to_elf( const vector<char*>& system_dep_files,
   codegenOptions.RelocationModel = llvm::Reloc::Static;
 
   if ( !compilerInstance.ExecuteAction( *action ) ) {
-    return diagOS.str() + "\nFailed to emit llvm\n";
+    return make_pair( false, diagOS.str() + "\nFailed to emit llvm\n" );
   }
 
   std::unique_ptr<llvm::Module> module = action->takeModule();
   if ( !module ) {
-    return "\nFailed to take module\n";
+    return make_pair( false, "\nFailed to take module\n" );
   }
 
   std::string llvm_res;
@@ -100,5 +100,5 @@ string c_to_elf( const vector<char*>& system_dep_files,
                      InMemFS,
                      std::move( OS ) );
 
-  return llvm_res;
+  return make_pair( compilerInstance.getDiagnostics().getNumErrors() == 0, llvm_res );
 }

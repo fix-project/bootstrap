@@ -75,7 +75,8 @@ static vector<size_t> consistent_hashing_name_to_output_file_index( vector<Func*
   return result;
 }
 
-tuple<array<string, NUM_OUTPUT>, string, string> wasm_to_c( const void* wasm_source, size_t source_size )
+tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( const void* wasm_source,
+                                                                              size_t source_size )
 {
   Errors errors;
   Module module;
@@ -134,5 +135,9 @@ tuple<array<string, NUM_OUTPUT>, string, string> wasm_to_c( const void* wasm_sou
   for ( unsigned int i = 0; i < NUM_OUTPUT; i++ ) {
     c_outputs[i] = c_streams[i].ReleaseStringBuf();
   }
-  return { c_outputs, h_stream.ReleaseStringBuf(), h_impl_stream.ReleaseStringBuf() };
+  string error_string = FormatErrorsToString( errors, Location::Type::Text );
+  return { c_outputs,
+           h_stream.ReleaseStringBuf(),
+           h_impl_stream.ReleaseStringBuf(),
+           errors.empty() ? nullopt : make_optional( error_string ) };
 }

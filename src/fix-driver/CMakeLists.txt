@@ -1,17 +1,20 @@
-add_link_options(-nostdlib -Wl,--no-entry -Wl,--allow-undefined
-                 $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++.a
-                 $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++abi.a
-                 $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc.a
-                 $ENV{HOME}/wasm-toolchain/sysroot/lib/clang/18/lib/wasi/libclang_rt.builtins-wasm32.a)
+add_link_options(-nostdlib -Wl,--no-entry -Wl,--allow-undefined)
+set(LIBS $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++.a
+         $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc++abi.a
+         $ENV{HOME}/wasm-toolchain/sysroot/lib/wasm32-wasi/libc.a
+         $ENV{HOME}/wasm-toolchain/sysroot/lib/clang/18/lib/wasi/libclang_rt.builtins-wasm32.a)
 
 add_library(stub-obj OBJECT "stubs.c")
 
 add_executable(wasm-to-c-fix "wasm2c-driver.cc")
 target_link_libraries(wasm-to-c-fix wasm-to-c-lib wabt)
+target_link_options(wasm-to-c-fix PRIVATE ${LIBS})
 add_executable(c-to-elf-fix "c-to-elf-driver.cc")
 target_link_libraries(c-to-elf-fix clang-lib ${CLANG_LIBS} ${LLVM_LIBS} stub-obj)
+target_link_options(c-to-elf-fix PRIVATE ${LIBS})
 add_executable(link-elfs-fix "link-elfs-driver.cc")
 target_link_libraries(link-elfs-fix lld-lib ${LLD_LIBS} ${LLVM_LIBS} stub-obj)
+target_link_options(link-elfs-fix PRIVATE ${LIBS})
 
 add_custom_command(
   OUTPUT "asm.wasm"

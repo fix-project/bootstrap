@@ -51,7 +51,7 @@ externref fixpoint_apply( externref encode )
   char* buffer = (char*)malloc( size_ro_mem_0() );
   ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
 
-  auto [c_outputs, h_header, h_impl_header] = wasm_to_c( buffer, size_ro_mem_0() );
+  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( buffer, size_ro_mem_0() );
 
   int c_written = 0;
   for ( int i = 0; i < 256; i++ ) {

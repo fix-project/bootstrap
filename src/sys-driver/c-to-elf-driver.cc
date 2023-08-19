@@ -34,11 +34,15 @@ int main( int argc, char* argv[] )
     clang_dep_content.push_back( clang_dep_files.back().addr() );
   }
 
-  string elf_res
+  pair<bool, string> elf_res
     = c_to_elf( system_dep_content, clang_dep_content, c_content.addr(), h_impl_content.addr(), h_content.addr() );
   ofstream fout_obj( argv[5] );
-  fout_obj << elf_res;
+  fout_obj << elf_res.second;
   fout_obj.close();
 
+  if ( not elf_res.first ) {
+    cerr << elf_res.second << endl;
+    return 1;
+  }
   return 0;
 }

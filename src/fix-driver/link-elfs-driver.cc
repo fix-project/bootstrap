@@ -45,7 +45,7 @@ externref fixpoint_apply( externref encode )
     dep_file_sizes.push_back( size_ro_mem_0() );
   }
 
-  std::string res = link_elfs( dep_files, dep_file_sizes );
+  auto [success, res] = link_elfs( dep_files, dep_file_sizes );
 
   if ( ( res.size() >> 16 ) > 0 ) {
     grow_rw_0( res.size() >> 16 );
