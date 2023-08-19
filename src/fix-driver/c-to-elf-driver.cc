@@ -26,6 +26,13 @@ extern size_t size_ro_table_1( void ) __attribute__( ( import_module( "asm" ), i
 extern void attach_tree_ro_table_1( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_tree_ro_table_1" ) ) );
 
+extern void program_memory_to_rw_1( int32_t, const void*, int32_t )
+  __attribute__( ( import_module( "asm" ), import_name( "program_memory_to_rw_1" ) ) );
+extern externref create_blob_rw_mem_1( int32_t )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "create_blob_rw_mem_1" ) ) );
+extern externref create_tag( externref, externref )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "create_tag" ) ) );
+
 // resource_limits | { resource_limits | clang | system_dep | clang_dep } | { h_impl | h } | c
 externref fixpoint_apply( externref encode )
 {
@@ -84,5 +91,10 @@ externref fixpoint_apply( externref encode )
     grow_rw_0( res.size() >> 16 );
   }
   program_memory_to_rw_0( 0, res.data(), res.size() );
-  return create_blob_rw_mem_0( res.size() );
+  externref blob = create_blob_rw_mem_0( res.size() );
+
+  std::string msg = result.first ? "Okay" : "Error";
+  program_memory_to_rw_1( 0, msg.data(), msg.size() );
+  externref msg_blob = create_blob_rw_mem_1( msg.size() );
+  return create_tag( blob, msg_blob );
 }

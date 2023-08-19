@@ -43,6 +43,9 @@ extern int32_t grow_rw_table_1( int32_t size, externref pointer )
 extern externref create_tree_rw_table_1( int32_t )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_tree_rw_table_1" ) ) );
 
+extern externref create_tag( externref, externref )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "create_tag" ) ) );
+
 externref fixpoint_apply( externref encode )
 {
   attach_tree_ro_table_0( encode );
@@ -52,6 +55,17 @@ externref fixpoint_apply( externref encode )
   ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
 
   auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( buffer, size_ro_mem_0() );
+
+  if ( errors ) {
+    std::string s = *errors;
+    program_memory_to_rw_0( 0, s.c_str(), s.size() );
+    externref blob = create_blob_rw_mem_0( s.size() );
+
+    program_memory_to_rw_1( 0, "Error", 5 );
+    externref msg_blob = create_blob_rw_mem_1( 5 );
+
+    return create_tag( blob, msg_blob );
+  }
 
   int c_written = 0;
   for ( int i = 0; i < 256; i++ ) {
@@ -85,5 +99,9 @@ externref fixpoint_apply( externref encode )
 
   set_rw_table_0( 0, h_tree );
   set_rw_table_0( 1, c_tree );
-  return create_tree_rw_table_0( 2 );
+  externref tree = create_tree_rw_table_0( 2 );
+
+  program_memory_to_rw_1( 0, "Okay", 4 );
+  externref msg_blob = create_blob_rw_mem_1( 4 );
+  return create_tag( tree, msg_blob );
 }

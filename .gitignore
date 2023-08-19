@@ -5,3 +5,4 @@
 /build/
 /.knit/
 /.knit.toml
+.clangd
