@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 SRC_REL=`dirname $0`
 SRC=`realpath ${SRC_REL}`
 FIX=${SRC}/.fix

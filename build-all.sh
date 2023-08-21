@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 
 PARALLEL=${1:-$(nproc)}
 

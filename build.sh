@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 # cmake -S . -B build
 # cmake --build build
 # cmake -S . -B fix-build -DBUILD_SYS_DRIVER=OFF
