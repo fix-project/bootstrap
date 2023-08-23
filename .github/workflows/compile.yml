@@ -37,7 +37,6 @@ jobs:
           name: bootstrap
           path: |
             ./.fix/
-            ./boot/
           if-no-files-found: error
 
   release:
@@ -56,7 +55,7 @@ jobs:
       - name: install zip
         run: sudo apt install zip -y
       - name: Create release asset
-        run: zip -r bootstrap boot .fix
+        run: zip -r bootstrap .fix
       - name: Show structure
         run: ls -R
       - name: Release

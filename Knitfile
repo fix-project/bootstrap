@@ -44,7 +44,7 @@ end
 local obj = knit.prefix(knit.suffix(fix_steps, ".o"), "tmp/")
 
 return b{
-  $ all:V: boot
+  $ all:V: .fix/refs/compile-encode
 
   $ build/CMakeCache.txt:
     cmake -B build -S . $configure_flags -G Ninja
@@ -62,11 +62,8 @@ return b{
 
   $ fix-build/%:B: fix-build
 
-  $ boot:VB: boot/compile-encode
-
-  $ boot/% .fix/%: $obj $(tools.serialize)
-    rm -rf boot .fix
-    mkdir -p boot .fix
+  $ .fix/%: $obj $(tools.serialize)
+    rm -rf .fix
     $(tools.serialize) ./ $llvm_include
 
 } + rules
