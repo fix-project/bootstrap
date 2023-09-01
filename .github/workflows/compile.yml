@@ -39,26 +39,26 @@ jobs:
             ./.fix/
           if-no-files-found: error
 
-  release:
-      if: startsWith(github.ref, 'refs/tags/')
-      needs: ['build']
-      runs-on: ubuntu-latest
-      steps:
-      - name: "checkout repository"
-        uses: "actions/checkout@v2"
-        with:
-          submodules: 'recursive'
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: bootstrap
-      - name: install zip
-        run: sudo apt install zip -y
-      - name: Create release asset
-        run: zip -r bootstrap .fix
-      - name: Show structure
-        run: ls -R
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: bootstrap.zip
+  # release:
+  #     if: startsWith(github.ref, 'refs/tags/')
+  #     needs: ['build']
+  #     runs-on: ubuntu-latest
+  #     steps:
+  #     - name: "checkout repository"
+  #       uses: "actions/checkout@v2"
+  #       with:
+  #         submodules: 'recursive'
+  #     - name: Download artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: bootstrap
+  #     - name: install zip
+  #       run: sudo apt install zip -y
+  #     - name: Create release asset
+  #       run: zip -r bootstrap .fix
+  #     - name: Show structure
+  #       run: ls -R
+  #     - name: Release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         files: bootstrap.zip
