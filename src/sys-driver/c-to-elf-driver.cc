@@ -1,4 +1,6 @@
 #include <bitset>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -16,14 +18,14 @@ int main( int argc, char* argv[] )
     cerr << "Usage: " << argv[0] << " path_to_c path_to_h_impl path_to_h path_to_resource_headers path_to_obj\n";
   }
 
-  ReadOnlyFile c_content { argv[1] };
-  ReadOnlyFile h_impl_content { argv[2] };
-  ReadOnlyFile h_content { argv[3] };
+  NullTerminatedReadOnlyFile c_content { argv[1] };
+  NullTerminatedReadOnlyFile h_impl_content { argv[2] };
+  NullTerminatedReadOnlyFile h_content { argv[3] };
 
-  std::vector<ReadOnlyFile> system_dep_files;
+  std::vector<NullTerminatedReadOnlyFile> system_dep_files;
   std::vector<char*> system_dep_content;
   for ( auto system_dep_path : system_deps ) {
-    system_dep_files.push_back( ReadOnlyFile( system_dep_path ) );
+    system_dep_files.push_back( NullTerminatedReadOnlyFile( system_dep_path ) );
     system_dep_content.push_back( system_dep_files.back().addr() );
   }
   std::vector<ReadOnlyFile> clang_dep_files;
@@ -41,7 +43,7 @@ int main( int argc, char* argv[] )
   fout_obj.close();
 
   if ( not elf_res.first ) {
-    cerr << elf_res.second << endl;
+    cerr << elf_res.second << argv[1] << endl;
     return 1;
   }
   return 0;
