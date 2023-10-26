@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdlib>
+#include <memory>
 #include <string_view>
+#include <unistd.h>
 
 #include "file_descriptor.hh"
 
@@ -50,4 +52,30 @@ class ReadWriteFile : public MMap_Region
 public:
   ReadWriteFile( FileDescriptor&& fd );
   operator string_span() const { return { addr(), length() }; }
+};
+
+class NullTerminatedReadOnlyFile : public ReadOnlyFile
+{
+  using unique_C_ptr = std::unique_ptr<char, decltype( &std::free )>;
+  unique_C_ptr buffer_ { nullptr, &std::free };
+
+public:
+  NullTerminatedReadOnlyFile( const std::string& filename )
+    : ReadOnlyFile( filename )
+  {
+    if ( length() % getpagesize() == 0 ) {
+      buffer_ = unique_C_ptr( reinterpret_cast<char*>( malloc( length() + 1 ) ), &std::free );
+      buffer_.get()[length()] = '\0';
+      memcpy( buffer_.get(), addr(), length() );
+    }
+  }
+
+  char* addr() const
+  {
+    if ( buffer_.get() ) {
+      return buffer_.get();
+    } else {
+      return ReadOnlyFile::addr();
+    }
+  }
 };
