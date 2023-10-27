@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 
-#include "base64.hh"
+#include "base16.hh"
 #include "depfile.hh"
 #include "file_names.hh"
 #include "handle.hh"
@@ -21,7 +21,7 @@ Handle serialize_file( fs::path objects, string file_path )
   string hash;
   wabt::sha256( file, hash );
   Handle blob_name( hash, file.length(), ContentType::Blob );
-  string file_name = base64::encode( blob_name );
+  string file_name = base16::encode( blob_name );
   ofstream fout( objects / file_name );
   fout << string_view( file );
   fout.close();
@@ -34,10 +34,10 @@ Handle serialize_tree( fs::path objects, const vector<Handle>& tree )
   string hash;
   wabt::sha256( view, hash );
   Handle tree_name( hash, view.size() / sizeof( Handle ), ContentType::Tree );
-  string file_name = base64::encode( tree_name );
+  string file_name = base16::encode( tree_name );
   ofstream fout( objects / file_name );
   for ( auto name : tree ) {
-    fout << base64::encode( name );
+    fout.write( (char*)&name, 32 );
   }
   fout.close();
   return tree_name;
@@ -45,17 +45,8 @@ Handle serialize_tree( fs::path objects, const vector<Handle>& tree )
 
 Handle serialize_tag( fs::path objects, const vector<Handle>& tag )
 {
-  string_view view( reinterpret_cast<const char*>( tag.data() ), tag.size() * sizeof( Handle ) );
-  string hash;
-  wabt::sha256( view, hash );
-  Handle tag_name( hash, view.size() / sizeof( Handle ), ContentType::Tag );
-  string file_name = base64::encode( tag_name );
-  ofstream fout( objects / file_name );
-  for ( auto name : tag ) {
-    fout << base64::encode( name );
-  }
-  fout.close();
-  return tag_name;
+  __m256i tree_name = serialize_tree( objects, tag );
+  return Handle( { (char*)&tree_name, 32 }, (size_t)3, ContentType::Tag );
 }
 
 int main( int argc, char* argv[] )
@@ -128,46 +119,46 @@ int main( int argc, char* argv[] )
 
   // Encode: {r, runnable-compile.elf, tagged-compile-tool-tree}
   vector<Handle> compile_encode;
-  compile_encode.push_back( Handle( "unused" ) );
+  compile_encode.push_back( Handle( "compile" ) );
   compile_encode.push_back( runnable_compile_name );
   compile_encode.push_back( compile_tool_tree_tag_name );
   Handle compile_encode_name = serialize_tag( objects, compile_encode );
 
   std::ofstream compile_tool_out( refs / "compile-encode" );
-  compile_tool_out << base64::encode( compile_encode_name );
+  compile_tool_out << base16::encode( compile_encode_name );
   compile_tool_out.close();
 
   size_t index = 0;
   for ( auto file : files ) {
     std::ofstream fout( refs / ( file + "-wasm" ) );
-    fout << base64::encode( wasm_names[index] );
+    fout << base16::encode( wasm_names[index] );
     fout.close();
     index++;
   }
 
   for ( size_t i = 0; i < 4; i++ ) {
     std::ofstream fout( refs / ( files[i] + "-runnable-tag" ) );
-    fout << base64::encode( runnable_tags[i] );
+    fout << base16::encode( runnable_tags[i] );
     fout.close();
   }
 
   {
-    std::ofstream fout ( refs / ( "compile-runnable-tag" ) );
-    fout << base64::encode( runnable_compile_name );
+    std::ofstream fout( refs / ( "compile-runnable-tag" ) );
+    fout << base16::encode( runnable_compile_name );
     fout.close();
   }
 
   {
-    std::ofstream fout ( refs / ( "compile-elf" ) );
-    fout << base64::encode( elf_names[4] );
+    std::ofstream fout( refs / ( "compile-elf" ) );
+    fout << base16::encode( elf_names[4] );
     fout.close();
   }
 
   std::ofstream st_out( refs / "system-dep-tree" );
-  st_out << base64::encode( system_dep_tree_name );
+  st_out << base16::encode( system_dep_tree_name );
   st_out.close();
   std::ofstream ct_out( refs / "clang-dep-tree" );
-  ct_out << base64::encode( clang_dep_tree_name );
+  ct_out << base16::encode( clang_dep_tree_name );
   ct_out.close();
 
   return 0;
