@@ -1,4 +1,5 @@
 #include "wasm-to-c.hh"
+#include <functional>
 
 typedef char __attribute__( ( address_space( 10 ) ) ) * externref;
 externref fixpoint_apply( externref encode ) __attribute__( ( export_name( "_fixpoint_apply" ) ) );
@@ -46,6 +47,19 @@ extern externref create_tree_rw_table_1( int32_t )
 extern externref create_tag( externref, externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_tag" ) ) );
 
+void stream_finish_callback( int& c_written, size_t index, std::string content )
+{
+  if ( content.rfind( "/* Empty wasm2c", 0 ) == 0 ) {
+    return;
+  }
+
+  grow_rw_0( ( content.size() >> 16 ) + 1 );
+  program_memory_to_rw_0( 0, content.data(), content.size() );
+  externref c_blob = create_blob_rw_mem_0( content.size() );
+  set_rw_table_1( c_written, c_blob );
+  c_written++;
+}
+
 externref fixpoint_apply( externref encode )
 {
   attach_tree_ro_table_0( encode );
@@ -54,7 +68,11 @@ externref fixpoint_apply( externref encode )
   char* buffer = (char*)malloc( size_ro_mem_0() );
   ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
 
-  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( buffer, size_ro_mem_0() );
+  int c_written = 0;
+  auto callback
+    = std::bind( stream_finish_callback, std::ref( c_written ), std::placeholders::_1, std::placeholders::_2 );
+
+  auto [h_header, h_impl_header, errors] = wasm_to_c( buffer, size_ro_mem_0(), callback );
 
   if ( errors ) {
     std::string s = *errors;
@@ -65,19 +83,6 @@ externref fixpoint_apply( externref encode )
     externref msg_blob = create_blob_rw_mem_1( 5 );
 
     return create_tag( blob, msg_blob );
-  }
-
-  int c_written = 0;
-  for ( int i = 0; i < 256; i++ ) {
-    std::string c_output = c_outputs.at( i );
-    if ( c_output.rfind( "/* Empty wasm2c", 0 ) == 0 ) {
-      continue;
-    }
-    grow_rw_0( ( c_output.size() >> 16 ) + 1 );
-    program_memory_to_rw_0( 0, c_output.data(), c_output.size() );
-    externref c_blob = create_blob_rw_mem_0( c_output.size() );
-    set_rw_table_1( c_written, c_blob );
-    c_written++;
   }
 
   externref c_tree = create_tree_rw_table_1( c_written );

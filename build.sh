@@ -52,11 +52,14 @@ for task in ${Tasks}; do
   echo "Compiling $task to ELF..."
   for i in {0..255}
   do
-    "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/18/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
-    running=$(jobs -r | wc -l)
-    if [ "$running" -ge $(("$PARALLEL"-1)) ]
-    then
-      wait -n
+    if test -f "${OUTPUT}"/"${task}"/function"${i}".c; then
+
+      "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/18/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
+      running=$(jobs -r | wc -l)
+      if [ "$running" -ge $(("$PARALLEL"-1)) ]
+      then
+        wait -n
+      fi
     fi
     printf "\r"
     progress_bar "$task" $(("$i"-"$running")) "$running" 256
@@ -76,8 +79,10 @@ for task in ${Tasks}; do
 
   for i in {0..255}
   do
-    LLDSYS+=" "
-    LLDSYS+="${OUTPUT}/${task}/function${i}.o"
+    if test -f "${OUTPUT}"/"${task}"/function"${i}".c; then
+      LLDSYS+=" "
+      LLDSYS+="${OUTPUT}/${task}/function${i}.o"
+    fi
   done
   eval "${LLDSYS}"
 done
