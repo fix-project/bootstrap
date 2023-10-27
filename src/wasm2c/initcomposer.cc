@@ -1,5 +1,6 @@
 #include "initcomposer.hh"
 
+#include <format>
 #include <sstream>
 
 #include "wabt/c-writer.h"
@@ -344,13 +345,6 @@ void InitComposer::write_get_attached_blob()
   }
 }
 
-struct function
-{
-  string return_type;
-  string name;
-  vector<string> parameter_types;
-};
-
 void InitComposer::write_function( function fn )
 {
   result_ << "extern " << fn.return_type << " fixpoint_" << fn.name << "(";
@@ -376,41 +370,184 @@ void InitComposer::write_function( function fn )
   result_ << "}\n" << endl;
 }
 
+struct functype
+{
+  string return_type;
+  string name;
+  vector<string> parameter_types;
+};
+
+const char* structs = R"INLINECODE(
+struct w2c_fixpoint {
+  void *runtime;
+  struct api *api;
+};
+
+)INLINECODE";
+
+inline string arg_name( size_t i )
+{
+  return std::format( "x{}", i );
+}
+
+inline vector<string> arg_names( size_t size )
+{
+  vector<string> result;
+  result.reserve( size );
+  for ( size_t i = 0; i < size; i++ ) {
+    result.push_back( arg_name( i ) );
+  }
+  return result;
+}
+
+inline vector<string> zip( vector<string> a, vector<string> b )
+{
+  vector<string> result;
+  result.reserve( a.size() );
+  for ( size_t i = 0; i < a.size() and i < b.size(); i++ ) {
+    result.push_back( std::format( "{} {}", a[i], b[i] ) );
+  }
+  return result;
+}
+
+inline string comma_separate( vector<string> items )
+{
+  ostringstream s;
+  for ( size_t i = 0; i < items.size(); i++ ) {
+    s << items[i];
+    if ( i != items.size() - 1 ) {
+      s << ", ";
+    }
+  }
+  return s.str();
+}
+
+string api_struct( vector<functype> helpers, vector<functype> functions )
+{
+  ostringstream s;
+
+  s << "struct api {\n";
+  for ( const functype& f : functions ) {
+    s << std::format( "  {}(*{})({});\n", f.return_type, f.name, comma_separate( f.parameter_types ) );
+  }
+  for ( const functype& f : helpers ) {
+    s << std::format( "  {}(*{})({});\n", f.return_type, f.name, comma_separate( f.parameter_types ) );
+  }
+  s << "};\n";
+
+  return s.str();
+};
+
+string api_function( functype f, bool exported )
+{
+  ostringstream s;
+
+  const auto args = f.parameter_types;
+
+  s << std::format( "{} {}({}) {{\n",
+                    f.return_type,
+                    exported ? ExportName( "fixpoint", f.name ) : std::format( "fixpoint_{}", f.name ),
+                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+  s << std::format(
+    "  return {}->api->{}({});\n", arg_name( 0 ), f.name, comma_separate( arg_names( args.size() ) ) );
+  s << "}\n\n";
+  return s.str();
+};
+
+/* void InitComposer::write_attach_blob() */
+/* { */
+/*   auto ro_mems = inspector_->GetExportedROMems(); */
+/*   result_ << "extern void fixpoint_attach_blob(__m256i, wasm_rt_memory_t*);" << endl; */
+/*   for ( uint32_t idx : ro_mems ) { */
+/*     result_ << "void " << ExportName( "fixpoint", "attach_blob_ro_mem_" + to_string( idx ) ) */
+/*             << "(struct w2c_fixpoint* instance, __m256i ro_handle) {" << endl; */
+/*     result_ << "  wasm_rt_memory_t* ro_mem = " << ExportName( module_prefix_, "ro_mem_" + to_string( idx ) ) <<
+ * "((" */
+/*             << state_info_type_name_ << "*)instance);" << endl; */
+/*     result_ << "  fixpoint_attach_blob(ro_handle, ro_mem);" << endl; */
+/*     result_ << "}\n" << endl; */
+/*   } */
+/* } */
+
+string blob_function( string mem, functype f, std::string wasm )
+{
+  ostringstream s;
+
+  const auto args = f.parameter_types;
+
+  s << std::format( "{} {}({}) {{\n",
+                    f.return_type,
+                    ExportName( "fixpoint", std::format( "{}_{}", f.name, mem ) ),
+                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+  s << std::format( "  wasm_rt_memory_t* mem = {}(({}*){});\n",
+                    ExportName( MangleName( wasm ), mem ),
+                    ModuleInstanceTypeName( wasm ),
+                    arg_name( 0 ) );
+  s << std::format( "  return fixpoint_{}({}, mem);\n", f.name, comma_separate( arg_names( args.size() ) ) );
+  s << "}\n\n";
+  return s.str();
+};
+
+string tree_function( string tbl, functype f, std::string wasm )
+{
+  ostringstream s;
+
+  const auto args = f.parameter_types;
+
+  s << std::format( "{} {}({}) {{\n",
+                    f.return_type,
+                    ExportName( "fixpoint", std::format( "{}_{}", f.name, tbl ) ),
+                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+  s << std::format( "  wasm_rt_externref_table_t* tbl = {}(({}*){});\n",
+                    ExportName( MangleName( wasm ), tbl ),
+                    ModuleInstanceTypeName( wasm ),
+                    arg_name( 0 ) );
+  s << std::format( "  return fixpoint_{}({}, tbl);\n", f.name, comma_separate( arg_names( args.size() ) ) );
+  s << "}\n\n";
+  return s.str();
+};
+
 string InitComposer::compose_header()
 {
   result_ = ostringstream();
+
   result_ << "#include <immintrin.h>" << endl;
   result_ << "#include \"" << wasm_name_ << ".h\"" << endl;
   result_ << endl;
 
-  write_attach_blob();
-  write_attach_tree();
-  write_create_blob();
-  write_create_tree();
-  write_get_attached_blob();
-  write_get_attached_tree();
+  vector<functype> helper_functions = {
+    { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_memory_t*" } },
+    { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_externref_table_t*" } },
+    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*", "wasm_rt_memory_t*" } },
+    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
+    { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_memory_t*" } },
+    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_externref_table_t*" } },
+  };
+
+  vector<functype> api_functions = {
+    { "__m256i", "create_blob_i32", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "__m256i", "create_tag", { "struct w2c_fixpoint*", "__m256i", "__m256i" } },
+    { "__m256i", "create_thunk", { "struct w2c_fixpoint*", "__m256i" } },
+    { "__m256i", "debug_try_evaluate", { "struct w2c_fixpoint*", "__m256i" } },
+    { "__m256i", "debug_try_inspect", { "struct w2c_fixpoint*", "__m256i" } },
+    { "__m256i", "debug_try_lift", { "struct w2c_fixpoint*", "__m256i" } },
+    { "uint32_t", "equality", { "struct w2c_fixpoint*", "__m256i", "__m256i" } },
+    { "__m256i", "lower", { "struct w2c_fixpoint*", "__m256i" } },
+    { "uint32_t", "get_access", { "struct w2c_fixpoint*", "__m256i" } },
+    { "uint32_t", "get_length", { "struct w2c_fixpoint*", "__m256i" } },
+    { "uint32_t", "get_value_type", { "struct w2c_fixpoint*", "__m256i" } },
+  };
+
+  result_ << api_struct( helper_functions, api_functions ) << endl;
+  result_ << structs;
+
   write_get_instance_size();
   write_init_read_only_mem_table();
   write_memory_size();
   write_unsafe_io();
 
-  vector<function> fns = {
-    { "__m256i", "create_blob_i32", { "uint32_t" } },
-    { "__m256i", "create_blob_i32", { "uint32_t" } },
-    { "__m256i", "create_tag", { "__m256i", "__m256i" } },
-    { "__m256i", "create_thunk", { "__m256i" } },
-    { "__m256i", "debug_try_evaluate", { "__m256i" } },
-    { "__m256i", "debug_try_inspect", { "__m256i" } },
-    { "__m256i", "debug_try_lift", { "__m256i" } },
-    { "uint32_t", "equality", { "__m256i", "__m256i" } },
-    { "__m256i", "lower", { "__m256i" } },
-    { "uint32_t", "get_access", { "__m256i" } },
-    { "uint32_t", "get_length", { "__m256i" } },
-    { "uint32_t", "get_value_type", { "__m256i" } },
-  };
-
-  unordered_map<string, function> fns_map {};
-  for ( const auto& fn : fns ) {
+  unordered_map<string, functype> fns_map {};
+  for ( const auto& fn : api_functions ) {
     fns_map.insert( std::make_pair( fn.name, fn ) );
   }
 
@@ -418,7 +555,56 @@ string InitComposer::compose_header()
 
   for ( const auto& f : fns_map ) {
     if ( imported.find( f.first ) != imported.end() ) {
-      write_function( f.second );
+      result_ << api_function( f.second, true );
+    }
+  }
+  for ( const auto& f : helper_functions ) {
+    result_ << api_function( f, false );
+  }
+  auto ro_mems = inspector_->GetExportedROMems();
+  auto rw_mems = inspector_->GetExportedRWMems();
+  auto ro_tables = inspector_->GetExportedROTables();
+  auto rw_tables = inspector_->GetExportedRWTables();
+
+  vector<functype> ro_blob_functions = {
+    { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i" } },
+    { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*" } },
+  };
+  vector<functype> rw_blob_functions = {
+    { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*" } },
+  };
+
+  for ( const auto& mem : ro_mems ) {
+    for ( const auto& f : ro_blob_functions ) {
+      result_ << blob_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
+    }
+  }
+  for ( const auto& mem : rw_mems ) {
+    for ( const auto& f : rw_blob_functions ) {
+      result_ << blob_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
+    }
+  }
+
+  vector<functype> ro_tree_functions = {
+    { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i" } },
+    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
+  };
+  vector<functype> rw_tree_functions = {
+    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
+  };
+
+  for ( const auto& table : ro_tables ) {
+    for ( const auto& f : ro_tree_functions ) {
+      result_ << tree_function( inspector_->GetTableName( table ), f, wasm_name_ );
+    }
+  }
+  for ( const auto& table : rw_tables ) {
+    for ( const auto& f : rw_tree_functions ) {
+      result_ << tree_function( inspector_->GetTableName( table ), f, wasm_name_ );
     }
   }
 

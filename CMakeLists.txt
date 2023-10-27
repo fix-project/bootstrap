@@ -59,7 +59,7 @@ include_directories($ENV{HOME}/wasm-toolchain/llvm-project/lld/include)
 # wabt setups
 set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_LIBWASM OFF CACHE BOOL "" FORCE)
-include_directories($ENV{HOME}/wasm-toolchain/wabt/include)
+include_directories(SYSTEM $ENV{HOME}/wasm-toolchain/wabt/include)
 add_subdirectory($ENV{HOME}/wasm-toolchain/wabt wabt EXCLUDE_FROM_ALL)
 
 set(CLANG_LIBS clangFrontend clangDriver clangSerialization clangParse clangCodeGen clangSema clangAnalysis clangEdit clangAST clangLex clangBasic)

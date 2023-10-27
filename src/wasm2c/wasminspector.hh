@@ -28,6 +28,8 @@ public:
   std::vector<wabt::Index> GetExportedROMemIndex() { return exported_ro_mem_; }
   std::vector<wabt::Index> GetExportedRWMemIndex() { return exported_rw_mem_; }
   bool ExportsMainMemory(); // True if module exports memory named memory
+  std::string GetMemoryName( uint32_t idx );
+  std::string GetTableName( uint32_t idx );
 
   // Implementation of ExprVisitor::DelegateNop.
   wabt::Result OnMemoryCopyExpr( wabt::MemoryCopyExpr* ) override;

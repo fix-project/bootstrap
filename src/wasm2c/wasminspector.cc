@@ -69,6 +69,16 @@ bool WasmInspector::ExportsMainMemory()
   return false;
 }
 
+string WasmInspector::GetMemoryName( uint32_t idx )
+{
+  return current_module_->memories[idx]->name.substr( 1 );
+}
+
+string WasmInspector::GetTableName( uint32_t idx )
+{
+  return current_module_->tables[idx]->name.substr( 1 );
+}
+
 Result WasmInspector::OnMemoryCopyExpr( MemoryCopyExpr* expr )
 {
   return CheckMemoryAccess( &expr->destmemidx );

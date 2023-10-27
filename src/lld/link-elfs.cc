@@ -12,7 +12,7 @@ std::pair<bool, std::string> link_elfs( std::vector<char*> dep_files, std::vecto
 {
   // Create File System
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemFS( new vfs::InMemoryFileSystem() );
-  std::vector<const char*> args = { "ld.lld", "-r", "-o", "-" };
+  std::vector<const char*> args = { "ld.lld", "-o", "-" };
   std::vector<std::string> file_names;
   std::string work_directory = "/fix/";
   for ( size_t i = 0; i < dep_files.size(); i++ ) {
