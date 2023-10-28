@@ -82,7 +82,7 @@ int main( int argc, char* argv[] )
   vector<Handle> elf_names;
   for ( auto file : files ) {
     wasm_names.push_back( serialize_file( objects, base_path / ( "fix-build/src/fix-driver/" + file + ".wasm" ) ) );
-    elf_names.push_back( serialize_file( objects, base_path / "tmp" / ( file + ".o" ) ) );
+    elf_names.push_back( serialize_file( objects, base_path / "tmp" / ( file + ".elf" ) ) );
   }
 
   vector<Handle> runnable_tags;

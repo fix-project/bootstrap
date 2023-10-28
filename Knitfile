@@ -36,12 +36,12 @@ for _, step in pairs(fix_steps) do
     $ $out/%.o: $out/%.c $out/function-impl.h $out/function.h $(tools.cc)[I]
       $(tools.cc) $input $llvm_include $output
 
-    $ $out.o: $o_files $(tools.ld)[I]
+    $ $out.elf: $o_files $(tools.ld)[I]
       $(tools.ld) $output $input
   }
 end
 
-local obj = knit.prefix(knit.suffix(fix_steps, ".o"), "tmp/")
+local obj = knit.prefix(knit.suffix(fix_steps, ".elf"), "tmp/")
 
 return b{
   $ all:V: .fix/refs/compile-encode

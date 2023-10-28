@@ -16,22 +16,25 @@ struct functype
   string return_type;
   string name;
   vector<string> parameter_types;
+  bool noreturn = false;
 };
 
 const char* structs = R"STRUCTS(
 struct w2c_fixpoint {
   void *runtime;
   struct api *api;
+  struct os *os;
+  struct rt *rt;
 };
 
 )STRUCTS";
 
-const char* wasm_rt = R"FUNCTIONS(
-bool wasm_rt_is_initialized() {
-  return true;
-}
+const char* vars = R"VARS(
 
-)FUNCTIONS";
+#define GS __attribute__((address_space(256)))
+struct w2c_fixpoint **GS context = (struct w2c_fixpoint **GS)(0);
+
+)VARS";
 
 static constexpr char kSymbolPrefix[] = "w2c_";
 
@@ -208,7 +211,7 @@ private:
 
 void InitComposer::write_init_read_only_mem_table()
 {
-  result_ << "void init_mems(" << state_info_type_name_ << "* instance) {" << endl;
+  result_ << "void protect_memories(" << state_info_type_name_ << "* instance) {" << endl;
   for ( const auto& ro_mem : inspector_->GetExportedROMems() ) {
     result_ << "  " << ExportName( module_prefix_, inspector_->GetMemoryName( ro_mem ) )
             << "(instance)->read_only = true;" << endl;
@@ -217,7 +220,7 @@ void InitComposer::write_init_read_only_mem_table()
   result_ << "}" << endl;
   result_ << endl;
 
-  result_ << "void init_tabs(" << state_info_type_name_ << "* instance) {" << endl;
+  result_ << "void protect_tables(" << state_info_type_name_ << "* instance) {" << endl;
   for ( const auto& ro_table : inspector_->GetExportedROTables() ) {
     result_ << "  " << ExportName( module_prefix_, inspector_->GetTableName( ro_table ) )
             << "(instance)->read_only = true;" << endl;
@@ -236,7 +239,6 @@ void InitComposer::write_get_instance_size()
 
 void InitComposer::write_unsafe_io()
 {
-
   result_ << "extern void fixpoint_unsafe_io(uint32_t index, uint32_t length, wasm_rt_memory_t* main_mem);" << endl;
   result_ << "void " << ExportName( "fixpoint", "unsafe_io" );
   result_ << "(struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {" << endl;
@@ -288,16 +290,15 @@ inline string comma_separate( vector<string> items )
   return s.str();
 }
 
-string api_struct( vector<functype> helpers, vector<functype> functions )
+string make_api_struct( string_view name, vector<vector<functype>> functions )
 {
   ostringstream s;
 
-  s << "struct api {\n";
-  for ( const functype& f : functions ) {
-    s << std::format( "  {}(*{})({});\n", f.return_type, f.name, comma_separate( f.parameter_types ) );
-  }
-  for ( const functype& f : helpers ) {
-    s << std::format( "  {}(*{})({});\n", f.return_type, f.name, comma_separate( f.parameter_types ) );
+  s << std::format( "struct {} {{\n", name );
+  for ( const auto& fs : functions ) {
+    for ( const functype& f : fs ) {
+      s << std::format( "  {}(*{})({});\n", f.return_type, f.name, comma_separate( f.parameter_types ) );
+    }
   }
   s << "};\n";
 
@@ -310,12 +311,63 @@ string api_function( functype f, bool exported )
 
   const auto args = f.parameter_types;
 
-  s << std::format( "{} {}({}) {{\n",
+  s << std::format( "{}{} {}({}) {{\n",
+                    f.noreturn ? "WASM_RT_NO_RETURN " : "",
                     f.return_type,
                     exported ? ExportName( "fixpoint", f.name ) : std::format( "fixpoint_{}", f.name ),
                     comma_separate( zip( args, arg_names( args.size() ) ) ) );
-  s << std::format(
-    "  return {}->api->{}({});\n", arg_name( 0 ), f.name, comma_separate( arg_names( args.size() ) ) );
+  s << std::format( "  {}{}->api->{}({});\n",
+                    f.noreturn ? "" : "return ",
+                    arg_name( 0 ),
+                    f.name,
+                    comma_separate( arg_names( args.size() ) ) );
+  if ( f.noreturn ) {
+    s << "  __builtin_unreachable();";
+  }
+  s << "}\n\n";
+  return s.str();
+};
+
+string rt_function( functype f )
+{
+  ostringstream s;
+
+  const auto args = f.parameter_types;
+
+  s << std::format( "{}{} wasm_rt_{}({}) {{\n",
+                    f.noreturn ? "WASM_RT_NO_RETURN " : "",
+                    f.return_type,
+                    f.name,
+                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+  s << std::format( "  {}(*context)->rt->{}({});\n",
+                    f.noreturn ? "" : "return ",
+                    f.name,
+                    comma_separate( arg_names( args.size() ) ) );
+  if ( f.noreturn ) {
+    s << "  __builtin_unreachable();";
+  }
+  s << "}\n\n";
+  return s.str();
+};
+
+string os_function( functype f )
+{
+  ostringstream s;
+
+  const auto args = f.parameter_types;
+
+  s << std::format( "{}{} os_{}({}) {{\n",
+                    f.noreturn ? "WASM_RT_NO_RETURN " : "",
+                    f.return_type,
+                    f.name,
+                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+  s << std::format( "  {}(*context)->os->{}({});\n",
+                    f.noreturn ? "" : "return ",
+                    f.name,
+                    comma_separate( arg_names( args.size() ) ) );
+  if ( f.noreturn ) {
+    s << "  __builtin_unreachable();";
+  }
   s << "}\n\n";
   return s.str();
 };
@@ -366,6 +418,8 @@ string InitComposer::compose_header()
   result_ << "#include \"" << wasm_name_ << ".h\"" << endl;
   result_ << endl;
 
+  result_ << vars;
+
   vector<functype> helper_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_memory_t*" } },
     { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_externref_table_t*" } },
@@ -391,7 +445,19 @@ string InitComposer::compose_header()
     { "uint32_t", "get_value_type", { "struct w2c_fixpoint*", "__m256i" } },
   };
 
-  result_ << api_struct( helper_functions, api_functions ) << endl;
+  result_ << "typedef void(*signal_handler_arg_t)(bool);\n";
+
+  vector<functype> rt_functions = {
+    { "void", "trap", { "wasm_rt_trap_t" }, true },
+  };
+
+  vector<functype> os_functions = {
+    { "void *", "aligned_alloc", { "size_t", "size_t" } },
+  };
+
+  result_ << make_api_struct( "api", { helper_functions, api_functions } ) << endl;
+  result_ << make_api_struct( "rt", { rt_functions } ) << endl;
+  result_ << make_api_struct( "os", { os_functions } ) << endl;
   result_ << structs;
 
   write_get_instance_size();
@@ -412,6 +478,13 @@ string InitComposer::compose_header()
   }
   for ( const auto& f : helper_functions ) {
     result_ << api_function( f, false );
+  }
+
+  for ( const auto& f : os_functions ) {
+    result_ << os_function( f );
+  }
+  for ( const auto& f : rt_functions ) {
+    result_ << rt_function( f );
   }
   auto ro_mems = inspector_->GetExportedROMems();
   auto mems = inspector_->GetExportedMems();
@@ -478,13 +551,23 @@ string InitComposer::compose_header()
     }
   }
 
-  result_ << "void initProgram(void* ptr) {" << endl;
-  result_ << "  " << state_info_type_name_ << "* instance = (" << state_info_type_name_ << "*)ptr;" << endl;
-  result_ << "  wasm2c_" << module_prefix_ << "_instantiate(instance, (struct w2c_fixpoint*)instance);" << endl;
-  result_ << "  init_mems(instance);" << endl;
-  result_ << "  init_tabs(instance);" << endl;
-  result_ << "  return;" << endl;
-  result_ << "}" << endl;
+  result_ << std::format( R"RUN(
+wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t encode) {{
+  {0} *instance = os_aligned_alloc(_Alignof(__m256i), sizeof({0}));
+  *context = ctx;
+  wasm2c_{1}_instantiate(instance, ctx);
+  protect_memories(instance);
+  protect_tables(instance);
+
+  wasm_rt_externref_t result = {2}(instance, encode);
+
+  wasm2c_{1}_free(instance);
+  return result;
+}}
+                        )RUN",
+                          state_info_type_name_,
+                          module_prefix_,
+                          ExportName( module_prefix_, "_fixpoint_apply" ) );
 
   return result_.str();
 }
