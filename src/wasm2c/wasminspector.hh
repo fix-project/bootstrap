@@ -21,15 +21,13 @@ public:
 
   wabt::Result Validate();
   const std::set<std::string>& GetImportedFunctions() { return imported_functions_; }
-  std::vector<uint32_t> GetExportedROMems() { return exported_ro_mem_idx_; }
-  std::vector<uint32_t> GetExportedRWMems() { return exported_rw_mem_idx_; }
-  std::vector<uint32_t> GetExportedROTables() { return exported_ro_table_idx_; }
-  std::vector<uint32_t> GetExportedRWTables() { return exported_rw_table_idx_; }
-  std::vector<wabt::Index> GetExportedROMemIndex() { return exported_ro_mem_; }
-  std::vector<wabt::Index> GetExportedRWMemIndex() { return exported_rw_mem_; }
+  std::set<wabt::Index> GetExportedROMems() { return exported_ro_mems_; }
+  std::set<wabt::Index> GetExportedMems() { return exported_mems_; }
+  std::set<wabt::Index> GetExportedROTables() { return exported_ro_tables_; }
+  std::set<wabt::Index> GetExportedTables() { return exported_tables_; }
   bool ExportsMainMemory(); // True if module exports memory named memory
-  std::string GetMemoryName( uint32_t idx );
-  std::string GetTableName( uint32_t idx );
+  std::string GetMemoryName( wabt::Index idx );
+  std::string GetTableName( wabt::Index idx );
 
   // Implementation of ExprVisitor::DelegateNop.
   wabt::Result OnMemoryCopyExpr( wabt::MemoryCopyExpr* ) override;
@@ -51,8 +49,8 @@ private:
   void VisitDataSegment( wabt::DataSegment* segment );
   void VisitScriptModule( wabt::ScriptModule* script_module );
   void VisitCommand( wabt::Command* command );
-  wabt::Result CheckMemoryAccess( wabt::Var* memidx );
-  wabt::Result CheckTableAccess( wabt::Var* tableidx );
+  wabt::Result MarkMemoryWriteable( wabt::Var* memidx );
+  wabt::Result MarkTableWriteable( wabt::Var* tableidx );
   wabt::Result ValidateAccess();
   wabt::Result ValidateImports();
 
@@ -63,14 +61,10 @@ private:
   wabt::Result result_ = wabt::Result::Ok;
 
   std::set<std::string> imported_functions_;
-  std::vector<wabt::Index> exported_ro_mem_;
-  std::vector<uint32_t> exported_ro_mem_idx_;
-  std::vector<wabt::Index> exported_rw_mem_;
-  std::vector<uint32_t> exported_rw_mem_idx_;
-  std::vector<wabt::Index> exported_ro_table_;
-  std::vector<uint32_t> exported_ro_table_idx_;
-  std::vector<wabt::Index> exported_rw_table_;
-  std::vector<uint32_t> exported_rw_table_idx_;
+  std::set<wabt::Index> exported_ro_mems_ {};
+  std::set<wabt::Index> exported_mems_ {};
+  std::set<wabt::Index> exported_ro_tables_ {};
+  std::set<wabt::Index> exported_tables_ {};
 };
 
 } // namespace wasminspector

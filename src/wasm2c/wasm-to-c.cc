@@ -105,10 +105,7 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
   wasminspector::WasmInspector inspector( &module, &errors );
   inspector.Validate();
 
-  for ( auto index : inspector.GetExportedROMemIndex() ) {
-    module.memories[index]->bounds_checked = true;
-  }
-  for ( auto index : inspector.GetExportedRWMemIndex() ) {
+  for ( auto index : inspector.GetExportedMems() ) {
     module.memories[index]->bounds_checked = true;
   }
 

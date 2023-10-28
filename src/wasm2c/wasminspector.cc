@@ -19,37 +19,16 @@ WasmInspector::WasmInspector( Module* module, Errors* errors )
   : errors_( errors )
   , current_module_( module )
   , visitor_( this )
-  , imported_functions_()
-  , exported_ro_mem_()
-  , exported_ro_mem_idx_()
-  , exported_rw_mem_()
-  , exported_rw_mem_idx_()
-  , exported_ro_table_()
-  , exported_ro_table_idx_()
-  , exported_rw_table_()
-  , exported_rw_table_idx_()
 {
   for ( Export* export_ : module->exports ) {
     if ( export_->kind == ExternalKind::Memory ) {
-      if ( export_->name.find( "ro_mem" ) != string::npos ) {
-        exported_ro_mem_.push_back( module->GetMemoryIndex( export_->var ) );
-        exported_ro_mem_idx_.push_back( (uint32_t)atoi( export_->name.substr( 7 ).data() ) );
-      }
-      if ( export_->name.find( "rw_mem" ) != string::npos ) {
-        exported_rw_mem_.push_back( module->GetMemoryIndex( export_->var ) );
-        exported_rw_mem_idx_.push_back( (uint32_t)atoi( export_->name.substr( 7 ).data() ) );
-      }
+      exported_ro_mems_.insert( current_module_->GetMemoryIndex( export_->var ) );
+      exported_mems_.insert( current_module_->GetMemoryIndex( export_->var ) );
     }
 
     if ( export_->kind == ExternalKind::Table ) {
-      if ( export_->name.find( "ro_table" ) != string::npos ) {
-        exported_ro_table_.push_back( module->GetTableIndex( export_->var ) );
-        exported_ro_table_idx_.push_back( (uint32_t)atoi( export_->name.substr( 9 ).data() ) );
-      }
-      if ( export_->name.find( "rw_table" ) != string::npos ) {
-        exported_rw_table_.push_back( module->GetTableIndex( export_->var ) );
-        exported_rw_table_idx_.push_back( (uint32_t)atoi( export_->name.substr( 9 ).data() ) );
-      }
+      exported_ro_tables_.insert( current_module_->GetTableIndex( export_->var ) );
+      exported_tables_.insert( current_module_->GetTableIndex( export_->var ) );
     }
   }
 
@@ -69,64 +48,64 @@ bool WasmInspector::ExportsMainMemory()
   return false;
 }
 
-string WasmInspector::GetMemoryName( uint32_t idx )
+string WasmInspector::GetMemoryName( wabt::Index idx )
 {
   return current_module_->memories[idx]->name.substr( 1 );
 }
 
-string WasmInspector::GetTableName( uint32_t idx )
+string WasmInspector::GetTableName( wabt::Index idx )
 {
   return current_module_->tables[idx]->name.substr( 1 );
 }
 
 Result WasmInspector::OnMemoryCopyExpr( MemoryCopyExpr* expr )
 {
-  return CheckMemoryAccess( &expr->destmemidx );
+  return MarkMemoryWriteable( &expr->destmemidx );
 }
 
 Result WasmInspector::OnMemoryFillExpr( MemoryFillExpr* expr )
 {
-  return CheckMemoryAccess( &expr->memidx );
+  return MarkMemoryWriteable( &expr->memidx );
 }
 
 Result WasmInspector::OnMemoryGrowExpr( MemoryGrowExpr* expr )
 {
-  return CheckMemoryAccess( &expr->memidx );
+  return MarkMemoryWriteable( &expr->memidx );
 }
 
 Result WasmInspector::OnMemoryInitExpr( MemoryInitExpr* expr )
 {
-  return CheckMemoryAccess( &expr->memidx );
+  return MarkMemoryWriteable( &expr->memidx );
 }
 
 Result WasmInspector::OnStoreExpr( StoreExpr* expr )
 {
-  return CheckMemoryAccess( &expr->memidx );
+  return MarkMemoryWriteable( &expr->memidx );
 }
 
 Result WasmInspector::OnTableSetExpr( TableSetExpr* expr )
 {
-  return CheckTableAccess( &expr->var );
+  return MarkTableWriteable( &expr->var );
 }
 
 Result WasmInspector::OnTableCopyExpr( TableCopyExpr* expr )
 {
-  return CheckTableAccess( &expr->dst_table );
+  return MarkTableWriteable( &expr->dst_table );
 }
 
 Result WasmInspector::OnTableGrowExpr( TableGrowExpr* expr )
 {
-  return CheckTableAccess( &expr->var );
+  return MarkTableWriteable( &expr->var );
 }
 
 Result WasmInspector::OnTableFillExpr( TableFillExpr* expr )
 {
-  return CheckTableAccess( &expr->var );
+  return MarkTableWriteable( &expr->var );
 }
 
 Result WasmInspector::OnTableInitExpr( TableInitExpr* expr )
 {
-  return CheckTableAccess( &expr->table_index );
+  return MarkTableWriteable( &expr->table_index );
 }
 
 void WasmInspector::VisitFunc( Func* func )
@@ -138,10 +117,7 @@ void WasmInspector::VisitFunc( Func* func )
 
 void WasmInspector::VisitExport( Export* export_ )
 {
-  if ( export_->name.find( "rw_mem" ) != string::npos ) {
-    result_ = CheckMemoryAccess( &export_->var );
-  }
-  return;
+  result_ = MarkMemoryWriteable( &export_->var );
 }
 
 void WasmInspector::VisitGlobal( Global* global )
@@ -202,7 +178,7 @@ Result WasmInspector::ValidateImports()
   }
 
   // Only rw memory can have nonzero initial size
-  for ( auto index : this->exported_ro_mem_ ) {
+  for ( auto index : this->exported_ro_mems_ ) {
     Memory* memory = current_module_->memories[index];
     if ( memory->page_limits.initial > 0 ) {
       return Result::Error;
@@ -210,7 +186,7 @@ Result WasmInspector::ValidateImports()
   }
 
   // Only rw table can have nonzero initial size
-  for ( auto index : this->exported_ro_table_ ) {
+  for ( auto index : this->exported_ro_tables_ ) {
     Table* table = current_module_->tables[index];
     if ( table->elem_limits.initial > 0 ) {
       return Result::Error;
@@ -237,26 +213,16 @@ Result WasmInspector::Validate()
   return result;
 }
 
-Result WasmInspector::CheckMemoryAccess( Var* memidx )
+Result WasmInspector::MarkMemoryWriteable( Var* memidx )
 {
-  if ( find( exported_ro_mem_.begin(), exported_ro_mem_.end(), current_module_->GetMemoryIndex( *memidx ) )
-       == exported_ro_mem_.end() ) {
-    return Result::Ok;
-  } else {
-    string message = "Error in CheckMemoryAccess";
-    errors_->push_back( createErrorWithMessage( message ) );
-    return Result::Error;
-  }
+  exported_ro_mems_.erase( current_module_->GetMemoryIndex( *memidx ) );
+  return Result::Ok;
 }
 
-Result WasmInspector::CheckTableAccess( Var* tableidx )
+Result WasmInspector::MarkTableWriteable( Var* tableidx )
 {
-  if ( find( exported_ro_table_.begin(), exported_ro_table_.end(), current_module_->GetTableIndex( *tableidx ) )
-       == exported_ro_table_.end() ) {
-    return Result::Ok;
-  } else {
-    return Result::Error;
-  }
+  exported_ro_tables_.erase( current_module_->GetMemoryIndex( *tableidx ) );
+  return Result::Ok;
 }
 
 } // namespace wasminspector

@@ -242,7 +242,7 @@ void InitComposer::write_memory_size()
 
 void InitComposer::write_create_blob()
 {
-  auto rw_mems = inspector_->GetExportedRWMems();
+  auto rw_mems = inspector_->GetExportedMems();
   result_ << "extern __m256i fixpoint_create_blob( wasm_rt_memory_t*, uint32_t );" << endl;
   for ( uint32_t idx : rw_mems ) {
     result_ << "__m256i " << ExportName( "fixpoint", "create_blob_rw_mem_" + to_string( idx ) )
@@ -256,7 +256,7 @@ void InitComposer::write_create_blob()
 
 void InitComposer::write_create_tree()
 {
-  auto rw_tables = inspector_->GetExportedRWTables();
+  auto rw_tables = inspector_->GetExportedTables();
   result_ << "extern __m256i fixpoint_create_tree( wasm_rt_externref_table_t*, uint32_t );" << endl;
   for ( auto rw_table : rw_tables ) {
     result_ << "__m256i " << ExportName( "fixpoint", "create_tree_rw_table_" + to_string( rw_table ) )
@@ -273,7 +273,7 @@ void InitComposer::write_init_read_only_mem_table()
 {
   result_ << "void init_mems(" << state_info_type_name_ << "* instance) {" << endl;
   for ( const auto& ro_mem : inspector_->GetExportedROMems() ) {
-    result_ << "  " << ExportName( module_prefix_, "ro_mem_" + to_string( ro_mem ) )
+    result_ << "  " << ExportName( module_prefix_, inspector_->GetMemoryName( ro_mem ) )
             << "(instance)->read_only = true;" << endl;
   }
   result_ << "  return;" << endl;
@@ -282,7 +282,7 @@ void InitComposer::write_init_read_only_mem_table()
 
   result_ << "void init_tabs(" << state_info_type_name_ << "* instance) {" << endl;
   for ( const auto& ro_table : inspector_->GetExportedROTables() ) {
-    result_ << "  " << ExportName( module_prefix_, "ro_table_" + to_string( ro_table ) )
+    result_ << "  " << ExportName( module_prefix_, inspector_->GetTableName( ro_table ) )
             << "(instance)->read_only = true;" << endl;
   }
   result_ << "  return;" << endl;
@@ -562,9 +562,9 @@ string InitComposer::compose_header()
     result_ << api_function( f, false );
   }
   auto ro_mems = inspector_->GetExportedROMems();
-  auto rw_mems = inspector_->GetExportedRWMems();
+  auto rw_mems = inspector_->GetExportedMems();
   auto ro_tables = inspector_->GetExportedROTables();
-  auto rw_tables = inspector_->GetExportedRWTables();
+  auto rw_tables = inspector_->GetExportedTables();
 
   vector<functype> ro_blob_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i" } },
@@ -589,9 +589,8 @@ string InitComposer::compose_header()
 
   vector<functype> ro_tree_functions = {
     { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i" } },
-    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
-    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
   };
+
   vector<functype> rw_tree_functions = {
     { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
     { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
