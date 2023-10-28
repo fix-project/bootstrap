@@ -11,6 +11,12 @@ using namespace wabt;
 
 namespace initcomposer {
 
+#include "shims.c.inc"
+#include "shims.h.inc"
+
+string_view shims { shims_data, (size_t)shims_data_len };
+string_view shims_impl { shims_impl_data, (size_t)shims_impl_data_len };
+
 struct functype
 {
   string return_type;
@@ -18,23 +24,6 @@ struct functype
   vector<string> parameter_types;
   bool noreturn = false;
 };
-
-const char* structs = R"STRUCTS(
-struct w2c_fixpoint {
-  void *runtime;
-  struct api *api;
-  struct os *os;
-  struct rt *rt;
-};
-
-)STRUCTS";
-
-const char* vars = R"VARS(
-
-#define GS __attribute__((address_space(256)))
-struct w2c_fixpoint **GS context = (struct w2c_fixpoint **GS)(0);
-
-)VARS";
 
 static constexpr char kSymbolPrefix[] = "w2c_";
 
@@ -204,38 +193,8 @@ private:
   ostringstream result_;
   wasminspector::WasmInspector* inspector_;
 
-  void write_init_read_only_mem_table();
-  void write_get_instance_size();
   void write_unsafe_io();
 };
-
-void InitComposer::write_init_read_only_mem_table()
-{
-  result_ << "void protect_memories(" << state_info_type_name_ << "* instance) {" << endl;
-  for ( const auto& ro_mem : inspector_->GetExportedROMems() ) {
-    result_ << "  " << ExportName( module_prefix_, inspector_->GetMemoryName( ro_mem ) )
-            << "(instance)->read_only = true;" << endl;
-  }
-  result_ << "  return;" << endl;
-  result_ << "}" << endl;
-  result_ << endl;
-
-  result_ << "void protect_tables(" << state_info_type_name_ << "* instance) {" << endl;
-  for ( const auto& ro_table : inspector_->GetExportedROTables() ) {
-    result_ << "  " << ExportName( module_prefix_, inspector_->GetTableName( ro_table ) )
-            << "(instance)->read_only = true;" << endl;
-  }
-  result_ << "  return;" << endl;
-  result_ << "}" << endl;
-  result_ << endl;
-}
-
-void InitComposer::write_get_instance_size()
-{
-  result_ << "size_t get_instance_size() {" << endl;
-  result_ << "  return sizeof(" << state_info_type_name_ << ");" << endl;
-  result_ << "}\n" << endl;
-}
 
 void InitComposer::write_unsafe_io()
 {
@@ -338,7 +297,7 @@ string rt_function( functype f )
                     f.noreturn ? "WASM_RT_NO_RETURN " : "",
                     f.return_type,
                     f.name,
-                    comma_separate( zip( args, arg_names( args.size() ) ) ) );
+                    args.empty() ? "void" : comma_separate( zip( args, arg_names( args.size() ) ) ) );
   s << std::format( "  {}(*context)->rt->{}({});\n",
                     f.noreturn ? "" : "return ",
                     f.name,
@@ -418,7 +377,7 @@ string InitComposer::compose_header()
   result_ << "#include \"" << wasm_name_ << ".h\"" << endl;
   result_ << endl;
 
-  result_ << vars;
+  result_ << shims;
 
   vector<functype> helper_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_memory_t*" } },
@@ -445,23 +404,40 @@ string InitComposer::compose_header()
     { "uint32_t", "get_value_type", { "struct w2c_fixpoint*", "__m256i" } },
   };
 
-  result_ << "typedef void(*signal_handler_arg_t)(bool);\n";
-
   vector<functype> rt_functions = {
     { "void", "trap", { "wasm_rt_trap_t" }, true },
+    { "const char *", "strerror", { "wasm_rt_trap_t" } },
+    { "void", "load_exception", { "const wasm_rt_tag_t", "uint32_t", "const void*" } },
+    { "void", "throw", {}, true },
+    { "WASM_RT_UNWIND_TARGET*", "get_unwind_target", {} },
+    { "void", "set_unwind_target", { "WASM_RT_UNWIND_TARGET*" } },
+    { "wasm_rt_tag_t", "exception_tag", {} },
+    { "uint32_t", "exception_size", {} },
+    { "void *", "exception", {} },
+    { "void", "allocate_memory", { "wasm_rt_memory_t*", "uint64_t", "uint64_t", "bool" } },
+    { "void", "allocate_memory_sw_checked", { "wasm_rt_memory_t*", "uint64_t", "uint64_t", "bool" } },
+    { "uint64_t", "grow_memory", { "wasm_rt_memory_t*", "uint64_t" } },
+    { "uint64_t", "grow_memory_sw_checked", { "wasm_rt_memory_t*", "uint64_t" } },
+    { "void", "free_memory", { "wasm_rt_memory_t*" } },
+    { "void", "free_memory_sw_checked", { "wasm_rt_memory_t*" } },
+    { "void", "allocate_funcref_table", { "wasm_rt_funcref_table_t*", "uint32_t", "uint32_t" } },
+    { "void", "free_funcref_table", { "wasm_rt_funcref_table_t*" } },
+    { "uint32_t", "grow_funcref_table", { "wasm_rt_funcref_table_t*", "uint32_t", "wasm_rt_funcref_t" } },
+    { "void", "allocate_externref_table", { "wasm_rt_externref_table_t*", "uint32_t", "uint32_t" } },
+    { "void", "free_externref_table", { "wasm_rt_externref_table_t*" } },
+    { "uint32_t", "grow_externref_table", { "wasm_rt_externref_table_t*", "uint32_t", "wasm_rt_externref_t" } },
   };
 
   vector<functype> os_functions = {
     { "void *", "aligned_alloc", { "size_t", "size_t" } },
+    { "void", "free", { "void *" } },
+    { "void", "assert_fail", { "const char *", "const char *", "unsigned int", "const char *" } },
   };
 
   result_ << make_api_struct( "api", { helper_functions, api_functions } ) << endl;
   result_ << make_api_struct( "rt", { rt_functions } ) << endl;
   result_ << make_api_struct( "os", { os_functions } ) << endl;
-  result_ << structs;
 
-  write_get_instance_size();
-  write_init_read_only_mem_table();
   write_unsafe_io();
 
   unordered_map<string, functype> fns_map {};
@@ -491,13 +467,34 @@ string InitComposer::compose_header()
   auto ro_tables = inspector_->GetExportedROTables();
   auto tables = inspector_->GetExportedTables();
 
+  result_ << std::format( "void protect_memories_and_tables({} *instance) {{\n", state_info_type_name_ );
+  for ( const auto& ro_mem : ro_mems ) {
+    result_ << "  " << ExportName( module_prefix_, inspector_->GetMemoryName( ro_mem ) )
+            << "(instance)->read_only = true;" << endl;
+  }
+  for ( const auto& ro_table : ro_tables ) {
+    result_ << "  " << ExportName( module_prefix_, inspector_->GetTableName( ro_table ) )
+            << "(instance)->read_only = true;" << endl;
+  }
+  result_ << "}\n\n";
+
   vector<functype> ro_blob_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i" } },
     { "uint32_t", "memory_size", { "struct w2c_fixpoint*" } },
+    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*" } },
   };
   vector<functype> rw_blob_functions = {
     { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t" } },
-    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*" } },
+  };
+
+  vector<functype> ro_tree_functions = {
+    { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i" } },
+    { "uint32_t", "table_size", { "struct w2c_fixpoint*" } },
+    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
+  };
+
+  vector<functype> rw_tree_functions = {
+    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
   };
 
   result_ << "/* RO Mems:\n";
@@ -530,16 +527,6 @@ string InitComposer::compose_header()
     }
   }
 
-  vector<functype> ro_tree_functions = {
-    { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i" } },
-    { "uint32_t", "table_size", { "struct w2c_fixpoint*" } },
-  };
-
-  vector<functype> rw_tree_functions = {
-    { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
-    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
-  };
-
   for ( const auto& table : ro_tables ) {
     for ( const auto& f : ro_tree_functions ) {
       result_ << tree_function( inspector_->GetTableName( table ), f, wasm_name_ );
@@ -556,18 +543,20 @@ wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t e
   {0} *instance = os_aligned_alloc(_Alignof(__m256i), sizeof({0}));
   *context = ctx;
   wasm2c_{1}_instantiate(instance, ctx);
-  protect_memories(instance);
-  protect_tables(instance);
+  protect_memories_and_tables(instance);
 
   wasm_rt_externref_t result = {2}(instance, encode);
 
   wasm2c_{1}_free(instance);
+  os_free(instance);
   return result;
 }}
                         )RUN",
                           state_info_type_name_,
                           module_prefix_,
                           ExportName( module_prefix_, "_fixpoint_apply" ) );
+
+  result_ << shims_impl;
 
   return result_.str();
 }
