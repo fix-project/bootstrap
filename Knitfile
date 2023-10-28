@@ -55,10 +55,10 @@ return b{
   $ build/%:B: build
 
   $ fix-build/CMakeCache.txt:
-    # cmake -B fix-build -DBUILD_SYS_DRIVER=OFF -S . $configure_flags -G Ninja
+    cmake -B fix-build -DBUILD_SYS_DRIVER=OFF -S . $configure_flags -G Ninja
 
   $ fix-build:VB: fix-build/CMakeCache.txt
-    # cmake --build fix-build -j $$(nproc) -t map-wasm
+    cmake --build fix-build -j $$(nproc) -t map-wasm
 
   $ fix-build/%:B: fix-build
 
