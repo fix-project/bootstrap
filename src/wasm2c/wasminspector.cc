@@ -115,10 +115,7 @@ void WasmInspector::VisitFunc( Func* func )
   current_func_ = nullptr;
 }
 
-void WasmInspector::VisitExport( Export* export_ )
-{
-  result_ = MarkMemoryWriteable( &export_->var );
-}
+void WasmInspector::VisitExport( Export* export_ ) {}
 
 void WasmInspector::VisitGlobal( Global* global )
 {
@@ -177,20 +174,29 @@ Result WasmInspector::ValidateImports()
     }
   }
 
+  set<Index> to_erase {};
   // Only rw memory can have nonzero initial size
   for ( auto index : this->exported_ro_mems_ ) {
     Memory* memory = current_module_->memories[index];
     if ( memory->page_limits.initial > 0 ) {
-      return Result::Error;
+      to_erase.insert( index );
     }
   }
+
+  for ( auto index : to_erase ) {
+    exported_ro_mems_.erase( index );
+  }
+  to_erase.clear();
 
   // Only rw table can have nonzero initial size
   for ( auto index : this->exported_ro_tables_ ) {
     Table* table = current_module_->tables[index];
     if ( table->elem_limits.initial > 0 ) {
-      return Result::Error;
+      to_erase.insert( index );
     }
+  }
+  for ( auto index : to_erase ) {
+    exported_ro_tables_.erase( index );
   }
 
   // unsafe_io requires memory called "memory"
@@ -221,7 +227,7 @@ Result WasmInspector::MarkMemoryWriteable( Var* memidx )
 
 Result WasmInspector::MarkTableWriteable( Var* tableidx )
 {
-  exported_ro_tables_.erase( current_module_->GetMemoryIndex( *tableidx ) );
+  exported_ro_tables_.erase( current_module_->GetTableIndex( *tableidx ) );
   return Result::Ok;
 }
 
