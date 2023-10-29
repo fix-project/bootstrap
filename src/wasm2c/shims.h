@@ -14,6 +14,6 @@ struct w2c_fixpoint
 };
 
 #define GS __attribute__( ( address_space( 256 ) ) )
-struct w2c_fixpoint** const GS context = ( struct w2c_fixpoint * *GS )( 0 );
+static struct w2c_fixpoint** const GS context = ( struct w2c_fixpoint * *GS )( 0 );
 
 #endif

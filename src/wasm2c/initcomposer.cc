@@ -1,5 +1,6 @@
 #include "initcomposer.hh"
 
+#include <cmath>
 #include <format>
 #include <sstream>
 
@@ -17,6 +18,7 @@ namespace initcomposer {
 string_view shims { shims_data, (size_t)shims_data_len };
 string_view shims_impl { shims_impl_data, (size_t)shims_impl_data_len };
 
+namespace types {
 struct functype
 {
   string return_type;
@@ -24,6 +26,59 @@ struct functype
   vector<string> parameter_types;
   bool noreturn = false;
 };
+
+template<typename T>
+concept Pointer = is_pointer<T>::is_pointer;
+
+template<typename T>
+extern string name;
+template<>
+string name<float> = "float";
+template<>
+string name<double> = "double";
+template<>
+string name<size_t> = "size_t";
+template<>
+string name<void> = "void";
+template<>
+string name<int> = "int";
+template<typename T>
+string name<T const> = name<T> + " const";
+template<typename T>
+string name<T*> = name<T> + "*";
+
+template<typename R, typename... As>
+R return_type( R( As... ) );
+
+template<typename A, typename... As>
+void names( vector<string>& args )
+{
+  args.push_back( name<A> );
+  if constexpr ( sizeof...( As ) > 0 ) {
+    names<As...>( args );
+  }
+};
+
+template<typename R, typename... As>
+std::vector<string> arg_names( R( As... ) )
+{
+  vector<string> args;
+  args.reserve( sizeof...( As ) );
+  names<As...>( args );
+  return args;
+}
+
+template<typename F>
+functype type( F f, string n )
+{
+  return { name<decltype( return_type( f ) )>, n, arg_names( f ) };
+}
+
+}
+
+using functype = types::functype;
+#define CTYPE( F ) types::type( F, #F )
+#define MTYPE( F ) types::type<double( double )>( F, #F )
 
 static constexpr char kSymbolPrefix[] = "w2c_";
 
@@ -416,11 +471,17 @@ string InitComposer::compose_header()
   };
 
   vector<functype> os_functions = {
-    { "void *", "aligned_alloc", { "size_t", "size_t" } },
-    { "void", "free", { "void *" } },
+    CTYPE( aligned_alloc ),
+    CTYPE( free ),
     { "void", "assert_fail", { "const char *", "const char *", "unsigned int", "const char *" } },
-    { "void *", "memmove", { "void *", "const void *", "size_t" } },
-    { "void *", "memset", { "void *", "int", "size_t" } },
+    CTYPE( memcpy ),
+    CTYPE( memmove ),
+    CTYPE( memset ),
+    MTYPE( sqrt ),
+    CTYPE( ceilf ),
+    MTYPE( ceil ),
+    MTYPE( floor ),
+    MTYPE( nearbyint ),
   };
 
   result_ << make_api_struct( "api", { helper_functions, api_functions } ) << endl;
@@ -535,7 +596,8 @@ void {} (struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {{
   {}(instance, index, length);
 }}
 )IO",
-                            ExportName( "fixpoint", "unsafe_io" ), ExportName("fixpoint", "unsafely_log_memory") );
+                            ExportName( "fixpoint", "unsafe_io" ),
+                            ExportName( "fixpoint", "unsafely_log_memory" ) );
   }
 
   result_ << std::format( R"RUN(
@@ -551,7 +613,7 @@ wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t e
   free(instance);
   return result;
 }}
-                        )RUN",
+)RUN",
                           state_info_type_name_,
                           module_prefix_,
                           ExportName( module_prefix_, "_fixpoint_apply" ) );
