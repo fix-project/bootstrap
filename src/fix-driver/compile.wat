@@ -2,7 +2,7 @@
   (import "fixpoint" "attach_tree_ro_table_0" (func $attach_tree_ro_table_0 (param externref)))
   (import "fixpoint" "attach_tree_ro_table_1" (func $attach_tree_ro_table_1 (param externref)))
   (import "fixpoint" "attach_blob_ro_mem_0" (func $attach_blob_ro_mem_0 (param externref)))
-  (import "fixpoint" "size_ro_mem_0" (func $size_ro_mem_0 (result i32)))
+  (import "fixpoint" "get_memory_size_ro_mem_0" (func $get_memory_size_ro_mem_0 (result i32)))
   (import "fixpoint" "create_blob_i32" (func $create_blob_i32 (param i32) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_0" (func $create_blob_rw_mem_0 (param i32) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_1" (func $create_blob_rw_mem_1 (param i32) (result externref)))
@@ -57,7 +57,7 @@
         ;; input.size() >> 14
         (global.set $parallelism
           (i32.shr_u
-            (call $size_ro_mem_0)
+            (call $get_memory_size_ro_mem_0)
             (i32.const 14)))
       ))
     (local.set $inner (table.get $ro_table_0 (i32.const 1)))

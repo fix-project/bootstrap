@@ -17,8 +17,8 @@ extern int32_t grow_rw_2( int32_t ) __attribute__( ( import_module( "asm" ), imp
 
 extern void attach_blob_ro_mem_0( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_blob_ro_mem_0" ) ) );
-extern int32_t size_ro_mem_0( void )
-  __attribute__( ( import_module( "fixpoint" ), import_name( "size_ro_mem_0" ) ) );
+extern int32_t get_memory_size_ro_mem_0( void )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "get_memory_size_ro_mem_0" ) ) );
 extern externref create_blob_rw_mem_0( int32_t )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_blob_rw_mem_0" ) ) );
 extern externref create_blob_rw_mem_1( int32_t )
@@ -51,10 +51,10 @@ externref fixpoint_apply( externref encode )
   attach_tree_ro_table_0( encode );
   attach_blob_ro_mem_0( get_ro_table_0( 2 ) );
 
-  char* buffer = (char*)malloc( size_ro_mem_0() );
-  ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
+  char* buffer = (char*)malloc( get_memory_size_ro_mem_0() );
+  ro_0_to_program_memory( buffer, 0, get_memory_size_ro_mem_0() );
 
-  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( buffer, size_ro_mem_0() );
+  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( buffer, get_memory_size_ro_mem_0() );
 
   if ( errors ) {
     std::string s = *errors;

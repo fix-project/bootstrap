@@ -11,8 +11,8 @@ extern int32_t grow_rw_0( int32_t ) __attribute__( ( import_module( "asm" ), imp
 
 extern void attach_blob_ro_mem_0( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_blob_ro_mem_0" ) ) );
-extern int32_t size_ro_mem_0( void )
-  __attribute__( ( import_module( "fixpoint" ), import_name( "size_ro_mem_0" ) ) );
+extern int32_t get_memory_size_ro_mem_0( void )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "get_memory_size_ro_mem_0" ) ) );
 extern externref create_blob_rw_mem_0( int32_t )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_blob_rw_mem_0" ) ) );
 
@@ -46,9 +46,9 @@ externref fixpoint_apply( externref encode )
   std::vector<char*> system_dep_files;
   for ( size_t i = 0; i < size_ro_table_1(); i++ ) {
     attach_blob_ro_mem_0( get_ro_table_1( i ) );
-    char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
-    ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
-    buffer[size_ro_mem_0()] = '\0';
+    char* buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+    ro_0_to_program_memory( buffer, 0, get_memory_size_ro_mem_0() );
+    buffer[get_memory_size_ro_mem_0()] = '\0';
     system_dep_files.push_back( buffer );
   }
 
@@ -56,9 +56,9 @@ externref fixpoint_apply( externref encode )
   std::vector<char*> clang_dep_files;
   for ( size_t i = 0; i < size_ro_table_1(); i++ ) {
     attach_blob_ro_mem_0( get_ro_table_1( i ) );
-    char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
-    ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
-    buffer[size_ro_mem_0()] = '\0';
+    char* buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+    ro_0_to_program_memory( buffer, 0, get_memory_size_ro_mem_0() );
+    buffer[get_memory_size_ro_mem_0()] = '\0';
     clang_dep_files.push_back( buffer );
   }
 
@@ -67,20 +67,20 @@ externref fixpoint_apply( externref encode )
   externref h_blob = get_ro_table_1( 1 );
 
   attach_blob_ro_mem_0( h_impl_blob );
-  char* h_impl_buffer = (char*)malloc( size_ro_mem_0() + 1 );
-  ro_0_to_program_memory( h_impl_buffer, 0, size_ro_mem_0() );
-  h_impl_buffer[size_ro_mem_0()] = '\0';
+  char* h_impl_buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+  ro_0_to_program_memory( h_impl_buffer, 0, get_memory_size_ro_mem_0() );
+  h_impl_buffer[get_memory_size_ro_mem_0()] = '\0';
 
   attach_blob_ro_mem_0( h_blob );
-  char* h_buffer = (char*)malloc( size_ro_mem_0() + 1 );
-  ro_0_to_program_memory( h_buffer, 0, size_ro_mem_0() );
-  h_buffer[size_ro_mem_0()] = '\0';
+  char* h_buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+  ro_0_to_program_memory( h_buffer, 0, get_memory_size_ro_mem_0() );
+  h_buffer[get_memory_size_ro_mem_0()] = '\0';
 
   externref c_blob = get_ro_table_0( 3 );
   attach_blob_ro_mem_0( c_blob );
-  char* c_buffer = (char*)malloc( size_ro_mem_0() + 1 );
-  ro_0_to_program_memory( c_buffer, 0, size_ro_mem_0() );
-  c_buffer[size_ro_mem_0()] = '\0';
+  char* c_buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+  ro_0_to_program_memory( c_buffer, 0, get_memory_size_ro_mem_0() );
+  c_buffer[get_memory_size_ro_mem_0()] = '\0';
 
   std::pair<bool, std::string> result
     = c_to_elf( system_dep_files, clang_dep_files, c_buffer, h_impl_buffer, h_buffer );

@@ -1,5 +1,6 @@
 #include "wasminspector.hh"
 
+#include <format>
 #include <string>
 
 using namespace std;
@@ -50,12 +51,28 @@ bool WasmInspector::ExportsMainMemory()
 
 string WasmInspector::GetMemoryName( wabt::Index idx )
 {
-  return current_module_->memories[idx]->name.substr( 1 );
+  for ( const auto& e : current_module_->exports ) {
+    if ( e->kind != ExternalKind::Memory )
+      continue;
+    if ( current_module_->GetMemoryIndex( e->var ) == idx ) {
+      return e->name;
+    }
+  }
+  errors_->push_back( createErrorWithMessage( std::format( "GetMemoryName: memory {} is not exported.", idx ) ) );
+  return "unknown";
 }
 
 string WasmInspector::GetTableName( wabt::Index idx )
 {
-  return current_module_->tables[idx]->name.substr( 1 );
+  for ( const auto& e : current_module_->exports ) {
+    if ( e->kind != ExternalKind::Table )
+      continue;
+    if ( current_module_->GetTableIndex( e->var ) == idx ) {
+      return e->name;
+    }
+  }
+  errors_->push_back( createErrorWithMessage( std::format( "GetTableName: table {} is not exported.", idx ) ) );
+  return "unknown";
 }
 
 Result WasmInspector::OnMemoryCopyExpr( MemoryCopyExpr* expr )

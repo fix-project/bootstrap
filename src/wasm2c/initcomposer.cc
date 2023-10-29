@@ -196,21 +196,7 @@ private:
   void write_unsafe_io();
 };
 
-void InitComposer::write_unsafe_io()
-{
-  result_ << "extern void fixpoint_unsafe_io(uint32_t index, uint32_t length, wasm_rt_memory_t* main_mem);" << endl;
-  result_ << "void " << ExportName( "fixpoint", "unsafe_io" );
-  result_ << "(struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {" << endl;
-
-  // Only call fixpoint_unsafe_io if there is a memory called "memory"
-  // Otherwise unsafe_io is a no op.
-  if ( inspector_->ExportsMainMemory() ) {
-    result_ << "  wasm_rt_memory_t* main_mem = " << ExportName( module_prefix_, "memory" ) << "(("
-            << state_info_type_name_ << "*)instance);" << endl;
-    result_ << "  fixpoint_unsafe_io(index, length, main_mem);" << endl;
-  }
-  result_ << "}" << endl;
-}
+void InitComposer::write_unsafe_io() {}
 
 inline string arg_name( size_t i )
 {
@@ -315,7 +301,7 @@ string os_function( functype f )
 
   const auto args = f.parameter_types;
 
-  s << std::format( "{}{} os_{}({}) {{\n",
+  s << std::format( "{}{} {}({}) {{\n",
                     f.noreturn ? "WASM_RT_NO_RETURN " : "",
                     f.return_type,
                     f.name,
@@ -331,7 +317,7 @@ string os_function( functype f )
   return s.str();
 };
 
-string blob_function( string mem, functype f, std::string wasm )
+string mem_function( string mem, functype f, std::string wasm )
 {
   ostringstream s;
 
@@ -350,7 +336,7 @@ string blob_function( string mem, functype f, std::string wasm )
   return s.str();
 };
 
-string tree_function( string tbl, functype f, std::string wasm )
+string tbl_function( string tbl, functype f, std::string wasm )
 {
   ostringstream s;
 
@@ -386,8 +372,9 @@ string InitComposer::compose_header()
     { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
     { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_memory_t*" } },
     { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_externref_table_t*" } },
-    { "uint32_t", "memory_size", { "struct w2c_fixpoint*", "wasm_rt_memory_t*" } },
-    { "uint32_t", "table_size", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
+    { "uint32_t", "get_memory_size", { "struct w2c_fixpoint*", "wasm_rt_memory_t*" } },
+    { "uint32_t", "get_table_size", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
+    { "void", "unsafely_log", { "struct w2c_fixpoint*", "uint32_t", "uint32_t", "wasm_rt_memory_t*" } },
   };
 
   vector<functype> api_functions = {
@@ -432,6 +419,8 @@ string InitComposer::compose_header()
     { "void *", "aligned_alloc", { "size_t", "size_t" } },
     { "void", "free", { "void *" } },
     { "void", "assert_fail", { "const char *", "const char *", "unsigned int", "const char *" } },
+    { "void *", "memmove", { "void *", "const void *", "size_t" } },
+    { "void *", "memset", { "void *", "int", "size_t" } },
   };
 
   result_ << make_api_struct( "api", { helper_functions, api_functions } ) << endl;
@@ -478,22 +467,24 @@ string InitComposer::compose_header()
   }
   result_ << "}\n\n";
 
-  vector<functype> ro_blob_functions = {
+  vector<functype> ro_mem_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i" } },
-    { "uint32_t", "memory_size", { "struct w2c_fixpoint*" } },
+    { "uint32_t", "get_memory_size", { "struct w2c_fixpoint*" } },
     { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*" } },
   };
-  vector<functype> rw_blob_functions = {
+
+  vector<functype> rw_mem_functions = {
     { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t" } },
+    { "void", "unsafely_log", { "struct w2c_fixpoint*", "uint32_t", "uint32_t" } },
   };
 
-  vector<functype> ro_tree_functions = {
+  vector<functype> ro_tbl_functions = {
     { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i" } },
-    { "uint32_t", "table_size", { "struct w2c_fixpoint*" } },
+    { "uint32_t", "get_table_size", { "struct w2c_fixpoint*" } },
     { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*" } },
   };
 
-  vector<functype> rw_tree_functions = {
+  vector<functype> rw_tbl_functions = {
     { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t" } },
   };
 
@@ -517,30 +508,39 @@ string InitComposer::compose_header()
   result_ << "*/\n\n";
 
   for ( const auto& mem : ro_mems ) {
-    for ( const auto& f : ro_blob_functions ) {
-      result_ << blob_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
+    for ( const auto& f : ro_mem_functions ) {
+      result_ << mem_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
     }
   }
   for ( const auto& mem : mems ) {
-    for ( const auto& f : rw_blob_functions ) {
-      result_ << blob_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
+    for ( const auto& f : rw_mem_functions ) {
+      result_ << mem_function( inspector_->GetMemoryName( mem ), f, wasm_name_ );
     }
   }
 
   for ( const auto& table : ro_tables ) {
-    for ( const auto& f : ro_tree_functions ) {
-      result_ << tree_function( inspector_->GetTableName( table ), f, wasm_name_ );
+    for ( const auto& f : ro_tbl_functions ) {
+      result_ << tbl_function( inspector_->GetTableName( table ), f, wasm_name_ );
     }
   }
   for ( const auto& table : tables ) {
-    for ( const auto& f : rw_tree_functions ) {
-      result_ << tree_function( inspector_->GetTableName( table ), f, wasm_name_ );
+    for ( const auto& f : rw_tbl_functions ) {
+      result_ << tbl_function( inspector_->GetTableName( table ), f, wasm_name_ );
     }
+  }
+
+  if ( inspector_->ExportsMainMemory() ) {
+    result_ << std::format( R"IO(
+void {} (struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {{
+  {}(instance, index, length);
+}}
+)IO",
+                            ExportName( "fixpoint", "unsafe_io" ), ExportName("fixpoint", "unsafely_log_memory") );
   }
 
   result_ << std::format( R"RUN(
 wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t encode) {{
-  {0} *instance = os_aligned_alloc(_Alignof(__m256i), sizeof({0}));
+  {0} *instance = aligned_alloc(_Alignof(__m256i), sizeof({0}));
   *context = ctx;
   wasm2c_{1}_instantiate(instance, ctx);
   protect_memories_and_tables(instance);
@@ -548,7 +548,7 @@ wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t e
   wasm_rt_externref_t result = {2}(instance, encode);
 
   wasm2c_{1}_free(instance);
-  os_free(instance);
+  free(instance);
   return result;
 }}
                         )RUN",

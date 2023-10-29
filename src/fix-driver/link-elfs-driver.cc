@@ -11,8 +11,8 @@ extern int32_t grow_rw_0( int32_t ) __attribute__( ( import_module( "asm" ), imp
 
 extern void attach_blob_ro_mem_0( externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "attach_blob_ro_mem_0" ) ) );
-extern int32_t size_ro_mem_0( void )
-  __attribute__( ( import_module( "fixpoint" ), import_name( "size_ro_mem_0" ) ) );
+extern int32_t get_memory_size_ro_mem_0( void )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "get_memory_size_ro_mem_0" ) ) );
 extern externref create_blob_rw_mem_0( int32_t )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_blob_rw_mem_0" ) ) );
 
@@ -74,11 +74,11 @@ externref fixpoint_apply( externref encode )
     }
     // unwrap the result
     attach_blob_ro_mem_0(get_ro_table_0(0));
-    char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
-    ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
-    buffer[size_ro_mem_0()] = '\0';
+    char* buffer = (char*)malloc( get_memory_size_ro_mem_0() + 1 );
+    ro_0_to_program_memory( buffer, 0, get_memory_size_ro_mem_0() );
+    buffer[get_memory_size_ro_mem_0()] = '\0';
     dep_files.push_back( buffer );
-    dep_file_sizes.push_back( size_ro_mem_0() );
+    dep_file_sizes.push_back( get_memory_size_ro_mem_0() );
   }
 
   auto [success, res] = link_elfs( dep_files, dep_file_sizes );
