@@ -139,18 +139,28 @@ int main( int argc, char* argv[] )
 
   size_t index = 0;
   for ( auto file : files ) {
-    std::ofstream fout( refs / ( file + "-elf" ) );
-    fout << base64::encode( elf_names[index] );
-    fout.close();
-    index++;
-  }
-
-  index = 0;
-  for ( auto file : files ) {
     std::ofstream fout( refs / ( file + "-wasm" ) );
     fout << base64::encode( wasm_names[index] );
     fout.close();
     index++;
+  }
+
+  for ( size_t i = 0; i < 4; i++ ) {
+    std::ofstream fout( refs / ( files[i] + "-runnable-tag" ) );
+    fout << base64::encode( runnable_tags[i] );
+    fout.close();
+  }
+
+  {
+    std::ofstream fout ( refs / ( "compile-runnable-tag" ) );
+    fout << base64::encode( runnable_compile_name );
+    fout.close();
+  }
+
+  {
+    std::ofstream fout ( refs / ( "compile-elf" ) );
+    fout << base64::encode( elf_names[4] );
+    fout.close();
   }
 
   std::ofstream st_out( refs / "system-dep-tree" );

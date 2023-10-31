@@ -39,9 +39,9 @@ static vector<size_t> consistent_hashing_name_to_output_file_index( vector<Func*
   map<string, pair<bool, size_t>> hash_to_index;
 
   // Insert file indexes to the map
-  for ( size_t i = 0; i < num_outputs; i++ ) {
+  for ( uint32_t i = 0; i < num_outputs; i++ ) {
     string hash_key;
-    wabt::sha256( { reinterpret_cast<char*>( &i ), sizeof( size_t ) }, hash_key );
+    wabt::sha256( { reinterpret_cast<char*>( &i ), sizeof( uint32_t ) }, hash_key );
     hash_to_index[hash_key] = { true, i };
   }
 
