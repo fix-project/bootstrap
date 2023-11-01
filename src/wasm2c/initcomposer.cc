@@ -238,6 +238,7 @@ public:
   {}
 
   string compose_header();
+  string compose_stub();
 
 private:
   wabt::Module* current_module_;
@@ -623,9 +624,24 @@ wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t e
   return result_.str();
 }
 
-string compose_header( string wasm_name, Module* module, Errors* error, wasminspector::WasmInspector* inspector )
+string InitComposer::compose_stub()
+{
+  ostringstream result_;
+  result_ << R"ASM(
+asm(
+    "_start:\n"
+    "jmp fixpoint_run\n"
+);
+)ASM";
+  return result_.str();
+}
+
+pair<string, string> compose_header( string wasm_name,
+                                     Module* module,
+                                     Errors* error,
+                                     wasminspector::WasmInspector* inspector )
 {
   InitComposer composer( wasm_name, module, error, inspector );
-  return composer.compose_header();
+  return { composer.compose_stub(), composer.compose_header() };
 }
 }

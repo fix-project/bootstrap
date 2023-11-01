@@ -50,7 +50,7 @@ return b{
     cmake -B build -S . $configure_flags -G Ninja
 
   $ build:VB: build/CMakeCache.txt
-    cmake --build build -j $$(nproc) -t wasm-to-c-sys
+    cmake --build build -j $$(nproc)
 
   $ build/%:B: build
 
@@ -58,7 +58,7 @@ return b{
     cmake -B fix-build -DBUILD_SYS_DRIVER=OFF -S . $configure_flags -G Ninja
 
   $ fix-build:VB: fix-build/CMakeCache.txt
-    cmake --build fix-build -j $$(nproc) -t map-wasm
+    cmake --build fix-build -j $$(nproc) -t compile-wasm
 
   $ fix-build/%:B: fix-build
 

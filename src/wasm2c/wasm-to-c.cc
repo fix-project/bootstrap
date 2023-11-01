@@ -117,6 +117,10 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
                                                     placeholders::_3,
                                                     placeholders::_4,
                                                     parallelism );
+
+  auto [fixpoint_start, fixpoint_c] = initcomposer::compose_header( "function", &module, &errors, &inspector );
+  // Make sure the start function is the first thing in the binary.
+  c_streams[0].WriteData( fixpoint_start.data(), fixpoint_start.size() );
   WriteC( std::move( c_stream_ptrs ),
           &h_stream,
           &h_impl_stream,
@@ -124,8 +128,6 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
           "function-impl.h",
           &module,
           write_c_options );
-
-  string fixpoint_c = initcomposer::compose_header( "function", &module, &errors, &inspector );
   c_streams[0].WriteData( fixpoint_c.data(), fixpoint_c.size() );
 
   array<string, NUM_OUTPUT> c_outputs;
