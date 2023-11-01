@@ -310,7 +310,7 @@ void InitComposer::write_unsafe_io()
             << state_info_type_name_ << "*)instance);" << endl;
     result_ << "  fixpoint_unsafe_io(index, length, main_mem);" << endl;
   }
-  result_ << "}" << endl;
+  result_ << "}\n" << endl;
 }
 
 void InitComposer::write_get_attached_tree()
@@ -396,7 +396,6 @@ string InitComposer::compose_header()
 
   vector<function> fns = {
     { "__m256i", "create_blob_i32", { "uint32_t" } },
-    { "__m256i", "create_blob_i32", { "uint32_t" } },
     { "__m256i", "create_tag", { "__m256i", "__m256i" } },
     { "__m256i", "create_thunk", { "__m256i" } },
     { "__m256i", "debug_try_evaluate", { "__m256i" } },
@@ -409,9 +408,9 @@ string InitComposer::compose_header()
     { "uint32_t", "get_value_type", { "__m256i" } },
   };
 
-  unordered_map<string, function> fns_map {};
+  vector<pair<string, function>> fns_map {};
   for ( const auto& fn : fns ) {
-    fns_map.insert( std::make_pair( fn.name, fn ) );
+    fns_map.push_back( std::make_pair( fn.name, fn ) );
   }
 
   const auto& imported = inspector_->GetImportedFunctions();

@@ -7,6 +7,17 @@
 
 using namespace std;
 
+void write_c_output( string output_path, size_t index, string content )
+{
+  if ( content.rfind( "/* Empty wasm2c", 0 ) == 0 ) {
+    return;
+  }
+
+  ofstream fout_c( output_path + "function" + to_string( index ) + ".c" );
+  fout_c << content;
+  fout_c.close();
+}
+
 int main( int argc, char* argv[] )
 {
   if ( argc < 2 ) {
@@ -19,13 +30,10 @@ int main( int argc, char* argv[] )
   }
   ReadOnlyFile wasm_content { argv[1] };
 
-  auto [c_outputs, h_header, h_impl_header, errors] = wasm_to_c( wasm_content.addr(), wasm_content.length() );
+  auto stream_finish_callback = bind( write_c_output, output_path, placeholders::_1, placeholders::_2 );
 
-  for ( unsigned int i = 0; i < NUM_OUTPUT; i++ ) {
-    ofstream fout_c( output_path + "function" + std::to_string( i ) + ".c" );
-    fout_c << c_outputs[i];
-    fout_c.close();
-  }
+  auto [h_header, h_impl_header, errors]
+    = wasm_to_c( wasm_content.addr(), wasm_content.length(), stream_finish_callback );
 
   ofstream fout_h_impl( output_path + "function-impl.h" );
   fout_h_impl << h_impl_header;

@@ -39,9 +39,9 @@ static vector<size_t> consistent_hashing_name_to_output_file_index( vector<Func*
   map<string, pair<bool, size_t>> hash_to_index;
 
   // Insert file indexes to the map
-  for ( size_t i = 0; i < num_outputs; i++ ) {
+  for ( uint32_t i = 0; i < num_outputs; i++ ) {
     string hash_key;
-    wabt::sha256( { reinterpret_cast<char*>( &i ), sizeof( size_t ) }, hash_key );
+    wabt::sha256( { reinterpret_cast<char*>( &i ), sizeof( uint32_t ) }, hash_key );
     hash_to_index[hash_key] = { true, i };
   }
 
@@ -75,8 +75,22 @@ static vector<size_t> consistent_hashing_name_to_output_file_index( vector<Func*
   return result;
 }
 
-tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( const void* wasm_source,
-                                                                              size_t source_size )
+string fixpoint_c;
+
+static void stream_finish_callback( function<void( size_t, string )> driver_stream_finish_callback,
+                                    size_t stream_index,
+                                    Stream* stream )
+{
+  if ( stream_index == 0 ) {
+    stream->WriteData( fixpoint_c.data(), fixpoint_c.size() );
+  }
+
+  driver_stream_finish_callback( stream_index, static_cast<MemoryStringStream*>( stream )->ReleaseStringBuf() );
+}
+
+tuple<string, string, optional<string>> wasm_to_c( const void* wasm_source,
+                                                   size_t source_size,
+                                                   function<void( size_t, string )> driver_stream_finish_callback )
 {
   Errors errors;
   Module module;
@@ -112,6 +126,8 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
     module.memories[index]->bounds_checked = true;
   }
 
+  fixpoint_c = initcomposer::compose_header( "function", &module, &errors, &inspector );
+
   WriteCOptions write_c_options;
   write_c_options.module_name = "function";
   write_c_options.name_to_output_file_index = bind( consistent_hashing_name_to_output_file_index,
@@ -120,6 +136,8 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
                                                     placeholders::_3,
                                                     placeholders::_4,
                                                     parallelism );
+  write_c_options.stream_finish_callback
+    = bind( stream_finish_callback, driver_stream_finish_callback, placeholders::_1, placeholders::_2 );
   WriteC( std::move( c_stream_ptrs ),
           &h_stream,
           &h_impl_stream,
@@ -128,16 +146,8 @@ tuple<array<string, NUM_OUTPUT>, string, string, optional<string>> wasm_to_c( co
           &module,
           write_c_options );
 
-  string fixpoint_c = initcomposer::compose_header( "function", &module, &errors, &inspector );
-  c_streams[0].WriteData( fixpoint_c.data(), fixpoint_c.size() );
-
-  array<string, NUM_OUTPUT> c_outputs;
-  for ( unsigned int i = 0; i < NUM_OUTPUT; i++ ) {
-    c_outputs[i] = c_streams[i].ReleaseStringBuf();
-  }
   string error_string = FormatErrorsToString( errors, Location::Type::Text );
-  return { c_outputs,
-           h_stream.ReleaseStringBuf(),
+  return { h_stream.ReleaseStringBuf(),
            h_impl_stream.ReleaseStringBuf(),
            errors.empty() ? nullopt : make_optional( error_string ) };
 }
