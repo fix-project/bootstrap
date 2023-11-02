@@ -42,6 +42,7 @@ for _, step in pairs(fix_steps) do
 end
 
 local obj = knit.prefix(knit.suffix(fix_steps, ".elf"), "tmp/")
+local hex = knit.extrepl(obj, ".elf", ".hex")
 
 return b{
   $ all:V: .fix/refs/compile-encode
@@ -61,6 +62,9 @@ return b{
     cmake --build fix-build -j $$(nproc) -t compile-wasm
 
   $ fix-build/%:B: fix-build
+
+  $ tmp/%.hex: tmp/%.elf
+    hexdump -C $input > $output
 
   $ .fix/%: $obj $(tools.serialize)
     rm -rf .fix

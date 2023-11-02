@@ -340,7 +340,7 @@ string rt_function( functype f )
                     f.return_type,
                     f.name,
                     args.empty() ? "void" : comma_separate( zip( args, arg_names( args.size() ) ) ) );
-  s << std::format( "  {}(*context)->rt->{}({});\n",
+  s << std::format( "  {}(CONTEXT)->rt->{}({});\n",
                     f.noreturn ? "" : "return ",
                     f.name,
                     comma_separate( arg_names( args.size() ) ) );
@@ -362,7 +362,7 @@ string os_function( functype f )
                     f.return_type,
                     f.name,
                     comma_separate( zip( args, arg_names( args.size() ) ) ) );
-  s << std::format( "  {}(*context)->os->{}({});\n",
+  s << std::format( "  {}(CONTEXT)->os->{}({});\n",
                     f.noreturn ? "" : "return ",
                     f.name,
                     comma_separate( arg_names( args.size() ) ) );
@@ -424,12 +424,8 @@ string InitComposer::compose_header()
   vector<functype> helper_functions = {
     { "void", "attach_blob", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_memory_t*" } },
     { "void", "attach_tree", { "struct w2c_fixpoint*", "__m256i", "wasm_rt_externref_table_t*" } },
-    { "__m256i", "get_attached_blob", { "struct w2c_fixpoint*", "wasm_rt_memory_t*" } },
-    { "__m256i", "get_attached_tree", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
     { "__m256i", "create_blob", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_memory_t*" } },
     { "__m256i", "create_tree", { "struct w2c_fixpoint*", "uint32_t", "wasm_rt_externref_table_t*" } },
-    { "uint32_t", "get_memory_size", { "struct w2c_fixpoint*", "wasm_rt_memory_t*" } },
-    { "uint32_t", "get_table_size", { "struct w2c_fixpoint*", "wasm_rt_externref_table_t*" } },
     { "void", "unsafely_log", { "struct w2c_fixpoint*", "uint32_t", "uint32_t", "wasm_rt_memory_t*" } },
   };
 
@@ -437,9 +433,6 @@ string InitComposer::compose_header()
     { "__m256i", "create_blob_i32", { "struct w2c_fixpoint*", "uint32_t" } },
     { "__m256i", "create_tag", { "struct w2c_fixpoint*", "__m256i", "__m256i" } },
     { "__m256i", "create_thunk", { "struct w2c_fixpoint*", "__m256i" } },
-    { "__m256i", "debug_try_evaluate", { "struct w2c_fixpoint*", "__m256i" } },
-    { "__m256i", "debug_try_inspect", { "struct w2c_fixpoint*", "__m256i" } },
-    { "__m256i", "debug_try_lift", { "struct w2c_fixpoint*", "__m256i" } },
     { "uint32_t", "equality", { "struct w2c_fixpoint*", "__m256i", "__m256i" } },
     { "__m256i", "lower", { "struct w2c_fixpoint*", "__m256i" } },
     { "uint32_t", "get_access", { "struct w2c_fixpoint*", "__m256i" } },
@@ -474,7 +467,7 @@ string InitComposer::compose_header()
   vector<functype> os_functions = {
     CTYPE( aligned_alloc ),
     CTYPE( free ),
-    { "void", "assert_fail", { "const char *", "const char *", "unsigned int", "const char *" } },
+    { "void", "__assert_fail", { "const char *", "const char *", "unsigned int", "const char *" }, true },
     CTYPE( memcpy ),
     CTYPE( memmove ),
     CTYPE( memset ),
@@ -594,7 +587,7 @@ string InitComposer::compose_header()
   if ( inspector_->ExportsMainMemory() ) {
     result_ << std::format( R"IO(
 void {} (struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {{
-  {}(instance, index, length);
+{}(instance, index, length);
 }}
 )IO",
                             ExportName( "fixpoint", "unsafe_io" ),
@@ -602,9 +595,9 @@ void {} (struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {{
   }
 
   result_ << std::format( R"RUN(
-wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t encode) {{
-  {0} *instance = aligned_alloc(_Alignof(__m256i), sizeof({0}));
-  *context = ctx;
+unsigned long _apply(struct w2c_fixpoint *ctx, wasm_rt_externref_t encode) {{
+  {0} *instance = ctx->os->aligned_alloc(_Alignof(__m256i), sizeof({0}));
+  SET_CONTEXT(ctx);
   wasm2c_{1}_instantiate(instance, ctx);
   protect_memories_and_tables(instance);
 
@@ -612,7 +605,8 @@ wasm_rt_externref_t fixpoint_run(struct w2c_fixpoint *ctx, wasm_rt_externref_t e
 
   wasm2c_{1}_free(instance);
   free(instance);
-  return result;
+  /* return result; */
+  return 0;
 }}
 )RUN",
                           state_info_type_name_,
@@ -630,7 +624,7 @@ string InitComposer::compose_stub()
   result_ << R"ASM(
 asm(
     "_start:\n"
-    "jmp fixpoint_run\n"
+    "jmp _apply\n"
 );
 )ASM";
   return result_.str();

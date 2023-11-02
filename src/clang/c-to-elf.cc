@@ -73,7 +73,7 @@ pair<bool, string> c_to_elf( const vector<char*>& system_dep_files,
   compilerInstance.setInvocation( compilerInvocation );
 
   auto& codegenOptions = compilerInstance.getCodeGenOpts();
-  codegenOptions.CodeModel = "large";
+  codegenOptions.CodeModel = "small";
   codegenOptions.RelocationModel = llvm::Reloc::Static;
 
   if ( !compilerInstance.ExecuteAction( *action ) ) {
