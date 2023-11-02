@@ -17,6 +17,7 @@ std::pair<bool, std::string> link_elfs( std::vector<char*> dep_files, std::vecto
     "-o",
     "-",
     "--oformat=binary",
+    "-Bsymbolic",
     "-Bsymbolic-functions",
     "--image-base=0",
     "-Ttext=0",

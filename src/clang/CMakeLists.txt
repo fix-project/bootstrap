@@ -5,6 +5,7 @@ add_custom_command(
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/wasm_rt_content.py
           $ENV{HOME}/wasm-toolchain/wabt/wasm2c/wasm-rt.h
           -o wasm-rt-content.h
+  DEPENDS $ENV{HOME}/wasm-toolchain/wabt/wasm2c/wasm-rt.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

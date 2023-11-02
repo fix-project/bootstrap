@@ -2,6 +2,7 @@
 local knit = require("knit")
 
 local fix_steps = {"wasm-to-c-fix", "c-to-elf-fix", "link-elfs-fix", "map", "compile"}
+fix_steps = {"compile"}
 
 tools = {
   wasm2c="build/src/sys-driver/wasm-to-c-sys",
