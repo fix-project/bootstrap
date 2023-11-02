@@ -35,6 +35,7 @@ int main( int argc, char* argv[] )
   }
 
   if ( not success ) {
+    cerr << res << "\n";
     return 1;
   }
   return 0;
