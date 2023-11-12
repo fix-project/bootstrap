@@ -8,6 +8,12 @@ using namespace llvm;
 
 LLD_HAS_DRIVER( elf )
 
+namespace lld {
+namespace elf {
+  void useVFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs);
+}
+}
+
 std::pair<bool, std::string> link_elfs( std::vector<char*> dep_files, std::vector<size_t> dep_file_sizes )
 {
   // Create File System
@@ -30,7 +36,8 @@ std::pair<bool, std::string> link_elfs( std::vector<char*> dep_files, std::vecto
   std::string llvm_stderr;
   raw_string_ostream llvm_stderrOS( llvm_stderr );
 
-  bool r = lld::elf::link( args, llvm_stdoutOS, llvm_stderrOS, false, false, InMemFS );
+  lld::elf::useVFS( InMemFS );
+  bool r = lld::elf::link( args, llvm_stdoutOS, llvm_stderrOS, false, false );
 
   if ( r ) {
     return make_pair( true, llvm_stdout );
