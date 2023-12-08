@@ -398,6 +398,7 @@ string InitComposer::compose_header()
     { "__m256i", "create_blob_i32", { "uint32_t" } },
     { "__m256i", "create_tag", { "__m256i", "__m256i" } },
     { "__m256i", "create_thunk", { "__m256i" } },
+    { "uint32_t", "pin", { "__m256i", "__m256i" } },
     { "__m256i", "debug_try_evaluate", { "__m256i" } },
     { "__m256i", "debug_try_inspect", { "__m256i" } },
     { "__m256i", "debug_try_lift", { "__m256i" } },
