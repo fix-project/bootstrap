@@ -93,7 +93,7 @@
     (call $attach_tree_ro_table_0 (table.get $ro_table_0 (i32.const 2)))
 
     ;; check if the tag was authored by us
-    (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 1)))
+    (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
 
     (if (result externref)
       (then
@@ -102,7 +102,7 @@
 
         ;; zoom into the boot toolchain tree
         ;; this contains: [wasm2c, cc, ld, system_deps, clang_deps, map]
-        (call $attach_tree_ro_table_0 (table.get $ro_table_0 (i32.const 0)))
+        (call $attach_tree_ro_table_0 (table.get $ro_table_0 (i32.const 1)))
         (local.set $wasm2c (table.get $ro_table_0 (i32.const 0)))
         (local.set $cc (table.get $ro_table_0 (i32.const 1)))
         (local.set $ld (table.get $ro_table_0 (i32.const 2)))
@@ -263,7 +263,7 @@
       ;; Attach the Tag
       (call $attach_tree_ro_table_0 (local.get $input))
       ;; check if the tag was authored by us
-      (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 1)))
+      (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
       (if
         (then
           ;; Created by compile
@@ -276,7 +276,7 @@
 
       ;; The tag we created contains a tag created by some step in the process;
       ;; we need to ensure that's an "Okay" tag.
-      (local.set $result (table.get $ro_table_0 (i32.const 0)))
+      (local.set $result (table.get $ro_table_0 (i32.const 1)))
       (call $attach_tree_ro_table_0 (local.get $result))
       (call $equality
         (call $create_blob_rw_mem_4 (i32.const 4))
@@ -287,9 +287,9 @@
         )
         (else
           ;; Not valid, tag the object as Error
-          (call $error_not_runnable (table.get $ro_table_0 (i32.const 0)))
+          (call $error_not_runnable (table.get $ro_table_0 (i32.const 1)))
           (return)))
       ;; Valid, tag the object as Runnable
-      (call $tag_runnable (table.get $ro_table_0 (i32.const 0)))
+      (call $tag_runnable (table.get $ro_table_0 (i32.const 1)))
     )
 )
