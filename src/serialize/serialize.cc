@@ -88,8 +88,8 @@ int main( int argc, char* argv[] )
   vector<Handle> runnable_tags;
   for ( size_t i = 0; i < 4; i++ ) {
     vector<Handle> runnable_tag;
-    runnable_tag.push_back( elf_names[i] );
     runnable_tag.push_back( elf_names[4] );
+    runnable_tag.push_back( elf_names[i] );
     runnable_tag.push_back( Handle( "Runnable" ) );
     runnable_tags.push_back( serialize_tag( objects, runnable_tag ) );
   }
@@ -112,8 +112,8 @@ int main( int argc, char* argv[] )
 
   // Tag compile_tool_tree bootstrap
   vector<Handle> compile_tool_tree_tag;
-  compile_tool_tree_tag.push_back( compile_tool_tree_name );
   compile_tool_tree_tag.push_back( elf_names[4] );
+  compile_tool_tree_tag.push_back( compile_tool_tree_name );
   compile_tool_tree_tag.push_back( Handle( "Bootstrap" ) );
   Handle compile_tool_tree_tag_name = serialize_tag( objects, compile_tool_tree_tag );
 
@@ -122,7 +122,7 @@ int main( int argc, char* argv[] )
   compile_encode.push_back( Handle( "compile" ) );
   compile_encode.push_back( runnable_compile_name );
   compile_encode.push_back( compile_tool_tree_tag_name );
-  Handle compile_encode_name = serialize_tag( objects, compile_encode );
+  Handle compile_encode_name = serialize_tree( objects, compile_encode );
 
   std::ofstream compile_tool_out( refs / "compile-encode" );
   compile_tool_out << base16::encode( compile_encode_name );

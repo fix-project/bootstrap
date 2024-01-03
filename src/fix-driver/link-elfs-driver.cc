@@ -59,8 +59,8 @@ externref fixpoint_apply( externref encode )
     return get_ro_table_0( 2 );
   }
 
-  // Look at the Object
-  attach_tree_ro_table_1( get_ro_table_1( 0 ) );
+  // Look at the Object in the tag
+  attach_tree_ro_table_1( get_ro_table_1( 1 ) );
   std::vector<char*> dep_files;
   std::vector<size_t> dep_file_sizes;
 
@@ -72,8 +72,8 @@ externref fixpoint_apply( externref encode )
       // not okay, return the error message
       return tag;
     }
-    // unwrap the result
-    attach_blob_ro_mem_0(get_ro_table_0(0));
+    // unwrap the result tag
+    attach_blob_ro_mem_0(get_ro_table_0(1));
     char* buffer = (char*)malloc( size_ro_mem_0() + 1 );
     ro_0_to_program_memory( buffer, 0, size_ro_mem_0() );
     buffer[size_ro_mem_0()] = '\0';

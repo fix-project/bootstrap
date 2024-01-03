@@ -37,7 +37,7 @@
         ;; Error
         (return (table.get $ro_table_0 (i32.const 3)))
       ))
-    (call $attach_tree_ro_table_1 (table.get $ro_table_1 (i32.const 0)))
+    (call $attach_tree_ro_table_1 (table.get $ro_table_1 (i32.const 1)))
 
     (local.set $x (table.get $ro_table_1 (i32.const 0)))
 
