@@ -13,8 +13,8 @@ and `wasm-toolchain` needs to be placed at `$ENV{HOME}/wasm-toolchain`.
 ```
 ./build-all.sh
 ```
-After building, there should be a `boot/` and a `.fix/` in the source directory
-of the project. Copy both directories to the source directory of Fix.
+After building, there should be a `.fix/` in the source directory
+of the project. Copy this directory to the source directory of Fix.
 
 ### Experimental: Incremental Build
 
