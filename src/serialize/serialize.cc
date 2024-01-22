@@ -1,52 +1,68 @@
 #include <array>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 
-#include "base16.hh"
+#include "handle.hh"
+#include "handle_util.hh"
+#include "repository.hh"
+
 #include "depfile.hh"
 #include "file_names.hh"
-#include "handle.hh"
-#include "mmap.hh"
-#include "wabt/sha256.h"
 
 using namespace std;
 namespace fs = std::filesystem;
 
-Handle serialize_file( fs::path objects, string file_path )
+Repository rp;
+
+Handle<Fix> to_fix( Handle<AnyTree> h )
 {
-  ReadOnlyFile file( file_path );
-  string hash;
-  wabt::sha256( file, hash );
-  Handle blob_name( hash, file.length(), ContentType::Blob );
-  string file_name = base16::encode( blob_name );
-  ofstream fout( objects / file_name );
-  fout << string_view( file );
-  fout.close();
-  return blob_name;
+  return h.visit<Handle<Fix>>( []( auto h ) { return h.template into<Fix>(); } );
 }
 
-Handle serialize_tree( fs::path objects, const vector<Handle>& tree )
+template<FixHandle... Args>
+Handle<Fix> create_tree( Args... args )
 {
-  string_view view( reinterpret_cast<const char*>( tree.data() ), tree.size() * sizeof( Handle ) );
-  string hash;
-  wabt::sha256( view, hash );
-  Handle tree_name( hash, view.size() / sizeof( Handle ), ContentType::Tree );
-  string file_name = base16::encode( tree_name );
-  ofstream fout( objects / file_name );
-  for ( auto name : tree ) {
-    fout.write( (char*)&name, 32 );
+  OwnedMutTree tree = OwnedMutTree::allocate( sizeof...( args ) );
+  size_t i = 0;
+  (
+    [&] {
+      tree[i] = args;
+      i++;
+    }(),
+    ... );
+  return to_fix( rp.create( make_shared<OwnedTree>( std::move( tree ) ) ) );
+}
+
+Handle<Fix> create_tree( vector<Handle<Fix>> vec )
+{
+  OwnedMutTree tree = OwnedMutTree::allocate( vec.size() );
+  for ( size_t i = 0; i < vec.size(); i++ ) {
+    tree[i] = vec[i];
   }
-  fout.close();
-  return tree_name;
+  return to_fix( rp.create( make_shared<OwnedTree>( std::move( tree ) ) ) );
 }
 
-Handle serialize_tag( fs::path objects, const vector<Handle>& tag )
+Handle<Fix> create_blob( fs::path p )
 {
-  __m256i tree_name = serialize_tree( objects, tag );
-  return Handle( { (char*)&tree_name, 32 }, (size_t)3, ContentType::Tag );
+  return rp.create( make_shared<OwnedBlob>( p ) );
+}
+
+Handle<Fix> create_tag( Handle<Fix> arg0, Handle<Fix> arg1, Handle<Fix> arg2 )
+{
+  OwnedMutTree mut_tree = OwnedMutTree::allocate( 3 );
+  mut_tree[0] = arg0;
+  mut_tree[1] = arg1;
+  mut_tree[2] = arg2;
+
+  auto tree = make_shared<OwnedTree>( std::move( mut_tree ) );
+  auto handle = handle::create( tree );
+  auto tagged = handle.visit<Handle<AnyTree>>( []( auto h ) { return h.tag(); } );
+
+  rp.put( tagged, tree );
+  return to_fix( tagged );
 }
 
 int main( int argc, char* argv[] )
@@ -57,109 +73,68 @@ int main( int argc, char* argv[] )
 
   string path_str = string( argv[1] );
   fs::path base_path( path_str );
-  auto fix = base_path / ".fix";
-  auto objects = fix / "objects";
-  auto refs = fix / "refs";
-  fs::create_directories( objects );
-  fs::create_directories( refs );
 
-  vector<Handle> system_dep_tree;
+  vector<Handle<Fix>> system_dep_tree;
   for ( const char* file_name : system_deps ) {
-    system_dep_tree.push_back( serialize_file( objects, file_name ) );
+    system_dep_tree.push_back( create_blob( file_name ) );
   }
-  Handle system_dep_tree_name = serialize_tree( objects, system_dep_tree );
+  auto system_dep_tree_name = create_tree( system_dep_tree );
 
-  vector<Handle> clang_dep_tree;
+  vector<Handle<Fix>> clang_dep_tree;
   string resource_dir_path( argv[2] );
   for ( const char* file_name : clang_deps ) {
     string file_path = resource_dir_path + get_base_name( file_name );
-    clang_dep_tree.push_back( serialize_file( objects, file_path.c_str() ) );
+    clang_dep_tree.push_back( create_blob( file_path ) );
   }
-  Handle clang_dep_tree_name = serialize_tree( objects, clang_dep_tree );
+  auto clang_dep_tree_name = create_tree( clang_dep_tree );
 
   array<string, 5> files = { "wasm-to-c-fix", "c-to-elf-fix", "link-elfs-fix", "map", "compile" };
-  vector<Handle> wasm_names;
-  vector<Handle> elf_names;
+  vector<Handle<Fix>> wasm_names;
+  vector<Handle<Fix>> elf_names;
   for ( auto file : files ) {
-    wasm_names.push_back( serialize_file( objects, base_path / ( "fix-build/src/fix-driver/" + file + ".wasm" ) ) );
-    elf_names.push_back( serialize_file( objects, base_path / "tmp" / ( file + ".o" ) ) );
+    wasm_names.push_back( create_blob( base_path / ( "fix-build/src/fix-driver/" + file + ".wasm" ) ) );
+    elf_names.push_back( create_blob( base_path / "tmp" / ( file + ".o" ) ) );
   }
 
-  vector<Handle> runnable_tags;
+  vector<Handle<Fix>> runnable_tags;
   for ( size_t i = 0; i < 4; i++ ) {
-    vector<Handle> runnable_tag;
-    runnable_tag.push_back( elf_names[4] );
-    runnable_tag.push_back( elf_names[i] );
-    runnable_tag.push_back( Handle( "Runnable" ) );
-    runnable_tags.push_back( serialize_tag( objects, runnable_tag ) );
+    runnable_tags.push_back( create_tag( elf_names[4], elf_names[i], Handle<Literal>( "Runnable" ) ) );
   }
 
-  vector<Handle> runnable_compile;
-  runnable_compile.push_back( elf_names[4] );
-  runnable_compile.push_back( elf_names[4] );
-  runnable_compile.push_back( Handle( "Runnable" ) );
-  Handle runnable_compile_name = serialize_tag( objects, runnable_compile );
+  auto compile_runnable_tag = create_tag( elf_names[4], elf_names[4], Handle<Literal>( "Runnable" ) );
 
   // {runnable-wasm2c.elf, runnable-clang.elf, runnable-lld.elf, system_dep_tree, clang_dep_tree, runnable-map.elf }
-  vector<Handle> compile_tool_tree;
-  compile_tool_tree.push_back( runnable_tags[0] );
-  compile_tool_tree.push_back( runnable_tags[1] );
-  compile_tool_tree.push_back( runnable_tags[2] );
-  compile_tool_tree.push_back( system_dep_tree_name );
-  compile_tool_tree.push_back( clang_dep_tree_name );
-  compile_tool_tree.push_back( runnable_tags[3] );
-  Handle compile_tool_tree_name = serialize_tree( objects, compile_tool_tree );
+  auto compile_tool_tree_name = create_tree( runnable_tags[0],
+                                             runnable_tags[1],
+                                             runnable_tags[2],
+                                             system_dep_tree_name,
+                                             clang_dep_tree_name,
+                                             runnable_tags[3] );
 
   // Tag compile_tool_tree bootstrap
-  vector<Handle> compile_tool_tree_tag;
-  compile_tool_tree_tag.push_back( elf_names[4] );
-  compile_tool_tree_tag.push_back( compile_tool_tree_name );
-  compile_tool_tree_tag.push_back( Handle( "Bootstrap" ) );
-  Handle compile_tool_tree_tag_name = serialize_tag( objects, compile_tool_tree_tag );
+  auto tagged_compile_tool_tree
+    = create_tag( elf_names[4], compile_tool_tree_name, Handle<Literal>( "Bootstrap" ) );
 
   // Encode: {r, runnable-compile.elf, tagged-compile-tool-tree}
-  vector<Handle> compile_encode;
-  compile_encode.push_back( Handle( "compile" ) );
-  compile_encode.push_back( runnable_compile_name );
-  compile_encode.push_back( compile_tool_tree_tag_name );
-  Handle compile_encode_name = serialize_tree( objects, compile_encode );
+  auto compile_encode_name
+    = create_tree( Handle<Literal>( "compile" ), compile_runnable_tag, tagged_compile_tool_tree );
 
-  std::ofstream compile_tool_out( refs / "compile-encode" );
-  compile_tool_out << base16::encode( compile_encode_name );
-  compile_tool_out.close();
+  rp.label( "compile-encode", compile_encode_name );
 
   size_t index = 0;
   for ( auto file : files ) {
-    std::ofstream fout( refs / ( file + "-wasm" ) );
-    fout << base16::encode( wasm_names[index] );
-    fout.close();
+    rp.label( file + "-wasm", wasm_names[index] );
     index++;
   }
 
   for ( size_t i = 0; i < 4; i++ ) {
-    std::ofstream fout( refs / ( files[i] + "-runnable-tag" ) );
-    fout << base16::encode( runnable_tags[i] );
-    fout.close();
+    rp.label( files[i] + "-runnable-tag", runnable_tags[i] );
   }
 
-  {
-    std::ofstream fout( refs / ( "compile-runnable-tag" ) );
-    fout << base16::encode( runnable_compile_name );
-    fout.close();
-  }
-
-  {
-    std::ofstream fout( refs / ( "compile-elf" ) );
-    fout << base16::encode( elf_names[4] );
-    fout.close();
-  }
-
-  std::ofstream st_out( refs / "system-dep-tree" );
-  st_out << base16::encode( system_dep_tree_name );
-  st_out.close();
-  std::ofstream ct_out( refs / "clang-dep-tree" );
-  ct_out << base16::encode( clang_dep_tree_name );
-  ct_out.close();
+  rp.label( "compile-runnable-tag", compile_runnable_tag );
+  rp.label( "compile-elf", elf_names[4] );
+  rp.label( "system-dep-tree", system_dep_tree_name );
+  rp.label( "clang-dep-tree", clang_dep_tree_name );
 
   return 0;
 }

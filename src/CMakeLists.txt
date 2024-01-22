@@ -10,7 +10,6 @@ add_subdirectory(lld)
 # Build corresponding driver
 if(BUILD_SYS_DRIVER)
   include_directories(util)
-  add_subdirectory(util)
   add_subdirectory(sys-driver)
   add_subdirectory(serialize)
 else()

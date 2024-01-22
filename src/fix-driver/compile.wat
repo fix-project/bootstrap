@@ -15,10 +15,12 @@
   (import "fixpoint" "create_tree_rw_table_2" (func $create_tree_rw_table_2 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_3" (func $create_tree_rw_table_3 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_4" (func $create_tree_rw_table_4 (param i32) (result externref)))
-  (import "fixpoint" "create_thunk" (func $create_thunk (param externref) (result externref)))
-  (import "fixpoint" "equality" (func $equality (param externref externref) (result i32)))
+  (import "fixpoint" "create_application_thunk" (func $create_application_thunk (param externref) (result externref)))
+  (import "fixpoint" "create_strict_encode" (func $create_strict_encode (param externref) (result externref)))
+  (import "fixpoint" "is_equal" (func $is_equal (param externref externref) (result i32)))
   (import "fixpoint" "create_tag" (func $create_tag (param externref externref) (result externref)))
-  (import "fixpoint" "get_value_type" (func $get_value_type (param externref) (result i32)))
+  (import "fixpoint" "is_blob" (func $is_blob (param externref) (result i32)))
+  (import "fixpoint" "is_tag" (func $is_tag (param externref) (result i32)))
   (memory $ro_mem_0 (export "ro_mem_0") 0)
   (table $ro_table_0 (export "ro_table_0") 0 externref)
   (table $ro_table_1 (export "ro_table_1") 0 externref)
@@ -48,8 +50,8 @@
     (local.set $resource_limits (table.get $ro_table_0 (i32.const 0)))
     ;; encode[2] is input.wasm
     (local.set $input (table.get $ro_table_0 (i32.const 2)))
-    (call $get_value_type (local.get $input))
-    (i32.eq (i32.const 2))
+    (call $is_blob (local.get $input))
+    (i32.eq (i32.const 1))
     (if
       (then
         ;; if it's a Blob, get the size
@@ -93,7 +95,7 @@
     (call $attach_tree_ro_table_0 (table.get $ro_table_0 (i32.const 2)))
 
     ;; check if the tag was authored by us
-    (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
+    (call $is_equal (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
 
     (if (result externref)
       (then
@@ -138,7 +140,8 @@
     (table.set $rw_table_0 (i32.const 0) (local.get $resource_limits))
     (table.set $rw_table_0 (i32.const 1) (local.get $wasm2c))
     (table.set $rw_table_0 (i32.const 2) (local.get $input))
-    (call $create_tree_rw_table_0 (i32.const 3)) (call $create_thunk)
+    (call $create_tree_rw_table_0 (i32.const 3)) (call $create_application_thunk)
+    (call $create_strict_encode)
 
     (local.set $c_files)
 
@@ -156,7 +159,8 @@
     (table.set $rw_table_2 (i32.const 2) (local.get $curried_cc))
     (table.set $rw_table_2 (i32.const 3) (local.get $c_files))
     (call $create_tree_rw_table_2 (i32.const 4))
-    (call $create_thunk)
+    (call $create_application_thunk)
+    (call $create_strict_encode)
     (local.set $o_files)
 
     ;; elf_file = ld(o_files)
@@ -164,7 +168,8 @@
     (table.set $rw_table_3 (i32.const 1) (local.get $ld))
     (table.set $rw_table_3 (i32.const 2) (local.get $o_files))
     (call $create_tree_rw_table_3 (i32.const 3))
-    (call $create_thunk)
+    (call $create_application_thunk)
+    (call $create_strict_encode)
     (local.set $elf_file)
 
     ;; result = compile(tag(elf_file, "Continuation"))
@@ -177,7 +182,7 @@
     (table.set $rw_table_4 (i32.const 1) (call $tag_runnable (local.get $compile)))
     (table.set $rw_table_4 (i32.const 2) (call $tag_continuation (local.get $elf_file)))
     (call $create_tree_rw_table_4 (i32.const 3))
-    (call $create_thunk))
+    (call $create_application_thunk))
 
   (func $error_invalid_boot_tree (result externref)
     (local $error externref)
@@ -230,8 +235,8 @@
     (local.set $inner_encode)
     (local.set $resource_limits)
 
-    (call $get_value_type (local.get $input))
-    (i32.eq (i32.const 2))
+    (call $is_blob (local.get $input))
+    (i32.eq (i32.const 1))
     (if (result externref)
       (then
         ;; Blob
@@ -249,8 +254,8 @@
       (call $attach_tree_ro_table_0 (local.get $inner))
       (local.set $compile (table.get $ro_table_0 (i32.const 1)))
 
-      (call $get_value_type (local.get $input))
-      (i32.eq (i32.const 3))
+      (call $is_tag (local.get $input))
+      (i32.eq (i32.const 1))
       (if
         (then
           ;; Tag
@@ -263,7 +268,7 @@
       ;; Attach the Tag
       (call $attach_tree_ro_table_0 (local.get $input))
       ;; check if the tag was authored by us
-      (call $equality (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
+      (call $is_equal (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
       (if
         (then
           ;; Created by compile
@@ -278,7 +283,7 @@
       ;; we need to ensure that's an "Okay" tag.
       (local.set $result (table.get $ro_table_0 (i32.const 1)))
       (call $attach_tree_ro_table_0 (local.get $result))
-      (call $equality
+      (call $is_equal
         (call $create_blob_rw_mem_4 (i32.const 4))
         (table.get $ro_table_0 (i32.const 2)))
       (if

@@ -38,10 +38,8 @@ extern externref create_blob_rw_mem_2( int32_t )
 
 extern externref create_tag( externref, externref )
   __attribute__( ( import_module( "fixpoint" ), import_name( "create_tag" ) ) );
-extern uint32_t get_value_type( externref )
-  __attribute__( ( import_module( "fixpoint" ), import_name( "get_value_type" ) ) );
-extern uint32_t fixpoint_equality( externref, externref )
-  __attribute__( ( import_module( "fixpoint" ), import_name( "equality" ) ) );
+extern uint32_t fixpoint_is_equal( externref, externref )
+  __attribute__( ( import_module( "fixpoint" ), import_name( "is_equal" ) ) );
 
 // The input is a result Tag from map.wat.  If it's an Okay, then it contains a Tree of results from the compiler.
 externref fixpoint_apply( externref encode )
@@ -54,7 +52,7 @@ externref fixpoint_apply( externref encode )
   // Look at the Tag
   attach_tree_ro_table_1( get_ro_table_0( 2 ) );
 
-  if ( not fixpoint_equality( get_ro_table_1( 2 ), okay ) ) {
+  if ( not fixpoint_is_equal( get_ro_table_1( 2 ), okay ) ) {
     // Propagate the error
     return get_ro_table_0( 2 );
   }
@@ -68,7 +66,7 @@ externref fixpoint_apply( externref encode )
   for ( size_t i = 0; i < n; i++ ) {
     externref tag = get_ro_table_1(i);
     attach_tree_ro_table_0(tag);
-    if (not fixpoint_equality(get_ro_table_0(2), okay)) {
+    if ( not fixpoint_is_equal( get_ro_table_0( 2 ), okay ) ) {
       // not okay, return the error message
       return tag;
     }
