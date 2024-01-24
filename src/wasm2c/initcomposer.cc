@@ -199,11 +199,11 @@ private:
 
 void InitComposer::write_attach_tree()
 {
-  result_ << "extern void fixpoint_attach_tree(__m256i, wasm_rt_externref_table_t*);" << endl;
+  result_ << "extern void fixpoint_attach_tree(u8x32, wasm_rt_externref_table_t*);" << endl;
   auto ro_tables = inspector_->GetExportedROTables();
   for ( uint32_t idx : ro_tables ) {
     result_ << "void " << ExportName( "fixpoint", "attach_tree_ro_table_" + to_string( idx ) )
-            << "(struct w2c_fixpoint* instance, __m256i ro_handle) {" << endl;
+            << "(struct w2c_fixpoint* instance, u8x32 ro_handle) {" << endl;
     result_ << "  wasm_rt_externref_table_t* ro_table = "
             << ExportName( module_prefix_, "ro_table_" + to_string( idx ) ) << "((" << state_info_type_name_
             << "*)instance);" << endl;
@@ -215,10 +215,10 @@ void InitComposer::write_attach_tree()
 void InitComposer::write_attach_blob()
 {
   auto ro_mems = inspector_->GetExportedROMems();
-  result_ << "extern void fixpoint_attach_blob(__m256i, wasm_rt_memory_t*);" << endl;
+  result_ << "extern void fixpoint_attach_blob(u8x32, wasm_rt_memory_t*);" << endl;
   for ( uint32_t idx : ro_mems ) {
     result_ << "void " << ExportName( "fixpoint", "attach_blob_ro_mem_" + to_string( idx ) )
-            << "(struct w2c_fixpoint* instance, __m256i ro_handle) {" << endl;
+            << "(struct w2c_fixpoint* instance, u8x32 ro_handle) {" << endl;
     result_ << "  wasm_rt_memory_t* ro_mem = " << ExportName( module_prefix_, "ro_mem_" + to_string( idx ) ) << "(("
             << state_info_type_name_ << "*)instance);" << endl;
     result_ << "  fixpoint_attach_blob(ro_handle, ro_mem);" << endl;
@@ -242,9 +242,9 @@ void InitComposer::write_memory_size()
 void InitComposer::write_create_blob()
 {
   auto rw_mems = inspector_->GetExportedRWMems();
-  result_ << "extern __m256i fixpoint_create_blob( wasm_rt_memory_t*, uint32_t );" << endl;
+  result_ << "extern u8x32 fixpoint_create_blob( wasm_rt_memory_t*, uint32_t );" << endl;
   for ( uint32_t idx : rw_mems ) {
-    result_ << "__m256i " << ExportName( "fixpoint", "create_blob_rw_mem_" + to_string( idx ) )
+    result_ << "u8x32 " << ExportName( "fixpoint", "create_blob_rw_mem_" + to_string( idx ) )
             << "(struct w2c_fixpoint* instance, uint32_t size) {" << endl;
     result_ << "  wasm_rt_memory_t* rw_mem = " << ExportName( module_prefix_, "rw_mem_" + to_string( idx ) ) << "(("
             << state_info_type_name_ << "*)instance);" << endl;
@@ -256,9 +256,9 @@ void InitComposer::write_create_blob()
 void InitComposer::write_create_tree()
 {
   auto rw_tables = inspector_->GetExportedRWTables();
-  result_ << "extern __m256i fixpoint_create_tree( wasm_rt_externref_table_t*, uint32_t );" << endl;
+  result_ << "extern u8x32 fixpoint_create_tree( wasm_rt_externref_table_t*, uint32_t );" << endl;
   for ( auto rw_table : rw_tables ) {
-    result_ << "__m256i " << ExportName( "fixpoint", "create_tree_rw_table_" + to_string( rw_table ) )
+    result_ << "u8x32 " << ExportName( "fixpoint", "create_tree_rw_table_" + to_string( rw_table ) )
             << "(struct w2c_fixpoint* instance, uint32_t size) {" << endl;
     result_ << "  wasm_rt_externref_table_t* rw_table = "
             << ExportName( module_prefix_, "rw_table_" + to_string( rw_table ) ) << "((" << state_info_type_name_
@@ -315,10 +315,10 @@ void InitComposer::write_unsafe_io()
 
 void InitComposer::write_get_attached_tree()
 {
-  result_ << "extern __m256i fixpoint_get_attached_tree(wasm_rt_externref_table_t*);" << endl;
+  result_ << "extern u8x32 fixpoint_get_attached_tree(wasm_rt_externref_table_t*);" << endl;
   auto ro_tables = inspector_->GetExportedROTables();
   for ( uint32_t idx : ro_tables ) {
-    result_ << "__m256i " << ExportName( "fixpoint", "get_attached_tree_ro_table_" + to_string( idx ) )
+    result_ << "u8x32 " << ExportName( "fixpoint", "get_attached_tree_ro_table_" + to_string( idx ) )
             << "(struct w2c_fixpoint* instance) {" << endl;
     result_ << "  wasm_rt_externref_table_t* ro_table = "
             << ExportName( module_prefix_, "ro_table_" + to_string( idx ) ) << "((" << state_info_type_name_
@@ -332,9 +332,9 @@ void InitComposer::write_get_attached_tree()
 void InitComposer::write_get_attached_blob()
 {
   auto ro_mems = inspector_->GetExportedROMems();
-  result_ << "extern __m256i fixpoint_get_attached_blob(wasm_rt_memory_t*);" << endl;
+  result_ << "extern u8x32 fixpoint_get_attached_blob(wasm_rt_memory_t*);" << endl;
   for ( uint32_t idx : ro_mems ) {
-    result_ << "__m256i " << ExportName( "fixpoint", "get_attached_blob_ro_mem_" + to_string( idx ) )
+    result_ << "u8x32 " << ExportName( "fixpoint", "get_attached_blob_ro_mem_" + to_string( idx ) )
             << "(struct w2c_fixpoint* instance) {" << endl;
     result_ << "  wasm_rt_memory_t* ro_mem = " << ExportName( module_prefix_, "ro_mem_" + to_string( idx ) ) << "(("
             << state_info_type_name_ << "*)instance);" << endl;
@@ -395,18 +395,20 @@ string InitComposer::compose_header()
   write_unsafe_io();
 
   vector<function> fns = {
-    { "__m256i", "create_blob_i32", { "uint32_t" } },
-    { "__m256i", "create_tag", { "__m256i", "__m256i" } },
-    { "__m256i", "create_thunk", { "__m256i" } },
-    { "uint32_t", "pin", { "__m256i", "__m256i" } },
-    { "__m256i", "debug_try_evaluate", { "__m256i" } },
-    { "__m256i", "debug_try_inspect", { "__m256i" } },
-    { "__m256i", "debug_try_lift", { "__m256i" } },
-    { "uint32_t", "equality", { "__m256i", "__m256i" } },
-    { "__m256i", "lower", { "__m256i" } },
-    { "uint32_t", "get_access", { "__m256i" } },
-    { "uint32_t", "get_length", { "__m256i" } },
-    { "uint32_t", "get_value_type", { "__m256i" } },
+    { "u8x32", "create_blob_i32", { "uint32_t" } },
+    { "u8x32", "create_tag", { "u8x32", "u8x32" } },
+    { "u8x32", "create_application_thunk", { "u8x32" } },
+    { "u8x32", "create_strict_encode", { "u8x32" } },
+    //  { "uint32_t", "pin", { "u8x32", "u8x32" } },
+    //  { "u8x32", "debug_try_evaluate", { "u8x32" } },
+    // { "u8x32", "debug_try_inspect", { "u8x32" } },
+    //  { "u8x32", "debug_try_lift", { "u8x32" } },
+    { "uint32_t", "is_equal", { "u8x32", "u8x32" } },
+    //  { "u8x32", "lower", { "u8x32" } },
+    //  { "uint32_t", "get_access", { "u8x32" } },
+    { "uint32_t", "get_length", { "u8x32" } },
+    { "uint32_t", "is_blob", { "u8x32" } },
+    { "uint32_t", "is_tag", { "u8x32" } },
   };
 
   vector<pair<string, function>> fns_map {};

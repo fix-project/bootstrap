@@ -1,0 +1,3 @@
+[submodule "fix"]
+	path = fix
+	url = https://github.com/fix-project/fix.git

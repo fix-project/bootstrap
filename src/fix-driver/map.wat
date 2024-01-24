@@ -7,8 +7,8 @@
   (import "fixpoint" "create_blob_rw_mem_0" (func $create_blob_rw_mem_0 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_0" (func $create_tree_rw_table_0 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_1" (func $create_tree_rw_table_1 (param i32) (result externref)))
-  (import "fixpoint" "create_thunk" (func $create_thunk (param externref) (result externref)))
-  (import "fixpoint" "equality" (func $equality (param externref externref) (result i32)))
+  (import "fixpoint" "create_application_thunk" (func $create_application_thunk (param externref) (result externref)))
+  (import "fixpoint" "is_equal" (func $is_equal (param externref externref) (result i32)))
   (import "fixpoint" "create_tag" (func $create_tag (param externref externref) (result externref)))
   (table $ro_table_0 (export "ro_table_0") 0 externref)
   (table $ro_table_1 (export "ro_table_1") 0 externref)
@@ -26,7 +26,7 @@
 
     (local.set $okay (call $create_blob_rw_mem_0 (i32.const 4)))
 
-    (call $equality
+    (call $is_equal
       (table.get $ro_table_1 (i32.const 2))
       (local.get $okay))
     (if
@@ -59,7 +59,7 @@
           (table.set $rw_table_0 (i32.const 2) (local.get $x))
           ;; arg[i]
           (table.set $rw_table_0 (i32.const 3) (table.get $ro_table_1 (local.get $i)))
-          (table.set $rw_table_1 (local.get $i) (call $create_thunk (call $create_tree_rw_table_0 (i32.const 4))))
+          (table.set $rw_table_1 (local.get $i) (call $create_application_thunk (call $create_tree_rw_table_0 (i32.const 4))))
           ;; i++
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           (br_if $ro_table_1_loop (i32.lt_s (local.get $i) (table.size $ro_table_1))))
