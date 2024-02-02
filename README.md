@@ -7,6 +7,8 @@ To build this project, you need to first build
 [fix-project/wasm-toolchain](https://github.com/fix-project/wasm-toolchain),
 and `wasm-toolchain` needs to be placed at `$ENV{HOME}/wasm-toolchain`.
 
+Run `git submodule update --init --recursive`. 
+
 ## Build
 
 ### Full Build
