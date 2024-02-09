@@ -1,3 +1,5 @@
+set (CMAKE_CXX_STANDARD 23)
+
 add_executable(wasm-to-c-sys "wasm2c-driver.cc")
 target_link_libraries(wasm-to-c-sys util)
 target_link_libraries(wasm-to-c-sys wasm-to-c-lib wabt)
