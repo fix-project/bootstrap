@@ -4,6 +4,7 @@
 #include <memory>
 #include <string_view>
 #include <unistd.h>
+#include <cstring>
 
 #include "file_descriptor.hh"
 
@@ -51,7 +52,6 @@ class ReadWriteFile : public MMap_Region
 
 public:
   ReadWriteFile( FileDescriptor&& fd );
-  operator string_span() const { return { addr(), length() }; }
 };
 
 class NullTerminatedReadOnlyFile : public ReadOnlyFile

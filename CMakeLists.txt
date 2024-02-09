@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0115 NEW)
+set (CMAKE_CXX_STANDARD 20)
 
 set(WASI_SDK $ENV{HOME}/wasm-toolchain/sysroot)
 set(WASIX_DIR $ENV{HOME}/wasm-toolchain/sysroot/wasix)
