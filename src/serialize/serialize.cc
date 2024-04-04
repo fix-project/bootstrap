@@ -3,9 +3,11 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "handle.hh"
+#include "handle_post.hh"
 #include "handle_util.hh"
 #include "repository.hh"
 
@@ -50,6 +52,14 @@ Handle<Fix> create_blob( fs::path p )
   return rp.create( make_shared<OwnedBlob>( p ) );
 }
 
+Handle<Fix> create_blob_ref( Handle<Fix> arg )
+{
+  return handle::extract<Named>( arg )
+    .transform( []( auto handle ) { return Handle<BlobRef>( Handle<Blob>( handle ) ); } )
+    .or_else( []() -> optional<Handle<BlobRef>> { throw runtime_error( "Not reffable" ); } )
+    .value();
+}
+
 Handle<Fix> create_tag( Handle<Fix> arg0, Handle<Fix> arg1, Handle<Fix> arg2 )
 {
   OwnedMutTree mut_tree = OwnedMutTree::allocate( 3 );
@@ -65,6 +75,23 @@ Handle<Fix> create_tag( Handle<Fix> arg0, Handle<Fix> arg1, Handle<Fix> arg2 )
   return to_fix( tagged );
 }
 
+Handle<Fix> create_tree_ref( Handle<Fix> arg0 )
+{
+  Handle<AnyTreeRef> h
+    = handle::extract<ObjectTree>( arg0 )
+        .transform( [&]( auto handle ) -> Handle<AnyTreeRef> {
+          return handle.template into<ObjectTreeRef>( rp.get( handle ).value()->size() );
+        } )
+        .or_else( [&]() -> optional<Handle<AnyTreeRef>> {
+          return handle::extract<ValueTree>( arg0 ).transform( [&]( auto handle ) -> Handle<AnyTreeRef> {
+            return handle.template into<ValueTreeRef>( rp.get( handle ).value()->size() );
+          } );
+        } )
+        .or_else( []() -> optional<Handle<AnyTreeRef>> { throw runtime_error( "Not reffable" ); } )
+        .value();
+  return handle::fix( h );
+}
+
 int main( int argc, char* argv[] )
 {
   if ( argc != 3 ) {
@@ -76,7 +103,7 @@ int main( int argc, char* argv[] )
 
   vector<Handle<Fix>> system_dep_tree;
   for ( const char* file_name : system_deps ) {
-    system_dep_tree.push_back( create_blob( file_name ) );
+    system_dep_tree.push_back( create_blob_ref( create_blob( file_name ) ) );
   }
   auto system_dep_tree_name = create_tree( system_dep_tree );
 
@@ -84,7 +111,7 @@ int main( int argc, char* argv[] )
   string resource_dir_path( argv[2] );
   for ( const char* file_name : clang_deps ) {
     string file_path = resource_dir_path + get_base_name( file_name );
-    clang_dep_tree.push_back( create_blob( file_path ) );
+    clang_dep_tree.push_back( create_blob_ref( create_blob( file_path ) ) );
   }
   auto clang_dep_tree_name = create_tree( clang_dep_tree );
 
@@ -104,12 +131,12 @@ int main( int argc, char* argv[] )
   auto compile_runnable_tag = create_tag( elf_names[4], elf_names[4], Handle<Literal>( "Runnable" ) );
 
   // {runnable-wasm2c.elf, runnable-clang.elf, runnable-lld.elf, system_dep_tree, clang_dep_tree, runnable-map.elf }
-  auto compile_tool_tree_name = create_tree( runnable_tags[0],
-                                             runnable_tags[1],
-                                             runnable_tags[2],
-                                             system_dep_tree_name,
-                                             clang_dep_tree_name,
-                                             runnable_tags[3] );
+  auto compile_tool_tree_name = create_tree( create_tree_ref( runnable_tags[0] ),
+                                             create_tree_ref( runnable_tags[1] ),
+                                             create_tree_ref( runnable_tags[2] ),
+                                             create_tree_ref( system_dep_tree_name ),
+                                             create_tree_ref( clang_dep_tree_name ),
+                                             create_tree_ref( runnable_tags[3] ) );
 
   // Tag compile_tool_tree bootstrap
   auto tagged_compile_tool_tree
