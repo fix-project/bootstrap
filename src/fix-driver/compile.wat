@@ -4,6 +4,7 @@
   (import "fixpoint" "attach_blob_ro_mem_0" (func $attach_blob_ro_mem_0 (param externref)))
   (import "fixpoint" "size_ro_mem_0" (func $size_ro_mem_0 (result i32)))
   (import "fixpoint" "create_blob_i32" (func $create_blob_i32 (param i32) (result externref)))
+  (import "fixpoint" "create_blob_i64" (func $create_blob_i64 (param i64) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_0" (func $create_blob_rw_mem_0 (param i32) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_1" (func $create_blob_rw_mem_1 (param i32) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_2" (func $create_blob_rw_mem_2 (param i32) (result externref)))
@@ -15,12 +16,14 @@
   (import "fixpoint" "create_tree_rw_table_2" (func $create_tree_rw_table_2 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_3" (func $create_tree_rw_table_3 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_4" (func $create_tree_rw_table_4 (param i32) (result externref)))
+  (import "fixpoint" "create_tree_rw_table_5" (func $create_tree_rw_table_5 (param i32) (result externref)))
   (import "fixpoint" "create_application_thunk" (func $create_application_thunk (param externref) (result externref)))
   (import "fixpoint" "create_strict_encode" (func $create_strict_encode (param externref) (result externref)))
   (import "fixpoint" "is_equal" (func $is_equal (param externref externref) (result i32)))
   (import "fixpoint" "create_tag" (func $create_tag (param externref externref) (result externref)))
   (import "fixpoint" "is_blob" (func $is_blob (param externref) (result i32)))
   (import "fixpoint" "is_tag" (func $is_tag (param externref) (result i32)))
+  (import "fixpoint" "get_length" (func $get_length (param externref) (result i32)))
   (memory $ro_mem_0 (export "ro_mem_0") 0)
   (table $ro_table_0 (export "ro_table_0") 0 externref)
   (table $ro_table_1 (export "ro_table_1") 0 externref)
@@ -35,8 +38,25 @@
   (table $rw_table_2 (export "rw_table_2") 4 externref)
   (table $rw_table_3 (export "rw_table_3") 3 externref)
   (table $rw_table_4 (export "rw_table_4") 3 externref)
+  (table $rw_table_5 (export "rw_table_5") 3 externref)
 
   (global $parallelism (mut i32) (i32.const 0))
+
+  ;; fn create_resource_limits(memory_usage, output_size, output_fan_out) -> externref
+  (func $create_resource_limits
+    (param $allowed_memory i64)
+    (param $estimated_output_size i32)
+    (param $estimated_fanout i32)
+    (result externref)
+    (local $allowed_memory_fix externref)
+    (local.set $allowed_memory_fix (call $create_blob_i64 (local.get $allowed_memory)))
+    (table.grow $rw_table_5 (local.get $allowed_memory_fix) (i32.const 3))
+    drop
+    (table.set $rw_table_5 (i32.const 0) (local.get $allowed_memory_fix))
+    (table.set $rw_table_5 (i32.const 1) (call $create_blob_i32 (local.get $estimated_output_size)))
+    (table.set $rw_table_5 (i32.const 2) (call $create_blob_i32 (local.get $estimated_fanout)))
+    (call $create_tree_rw_table_5 (i32.const 3))
+  )
 
   ;; fn parse_encode(encode) -> (resource_limits, inner_encode, input)
   (func $parse_encode
@@ -137,7 +157,16 @@
     (local $runnable externref)
 
     ;; c_files = wasm2c(input)
-    (table.set $rw_table_0 (i32.const 0) (local.get $resource_limits))
+    (table.set $rw_table_0 (i32.const 0)
+    (call $create_resource_limits
+          ;; memory usage 1024 * 1024 * 1024
+          (i64.const 1073741824)
+          ;; estimated output_size: 2 * wasm module size
+          (i32.mul
+            (call $size_ro_mem_0)
+            (i32.const 2))
+          ;; estimated output_fan_out
+          (global.get $parallelism)))
     (table.set $rw_table_0 (i32.const 1) (local.get $wasm2c))
     (table.set $rw_table_0 (i32.const 2) (local.get $input))
     (call $create_tree_rw_table_0 (i32.const 3)) (call $create_application_thunk)
@@ -146,6 +175,7 @@
     (local.set $c_files)
 
     ;; curried_cc = lambda x: cc(system_deps, clang_deps, x)
+    ;; $resource_limits will not be used
     (table.set $rw_table_1 (i32.const 0) (local.get $resource_limits))
     (table.set $rw_table_1 (i32.const 1) (local.get $cc))
     (table.set $rw_table_1 (i32.const 2) (local.get $system_deps))
@@ -154,7 +184,18 @@
     (local.set $curried_cc)
 
     ;; o_files = map(curried_cc, c_files)
-    (table.set $rw_table_2 (i32.const 0) (local.get $resource_limits))
+    (table.set $rw_table_2 (i32.const 0)
+     (call $create_resource_limits
+          ;; memory usage 1024 * 1024 * 1024
+          (i64.const 1073741824)
+          ;; estimated output_size: parallelism * 4 * sizeof( Handle ) + curried_cc.size
+          (i32.add
+            (i32.mul
+              (global.get $parallelism)
+              (i32.const 32))
+            (call $get_length (local.get $curried_cc)))
+          ;; estimated fan_out : parallelism
+          (global.get $parallelism)))
     (table.set $rw_table_2 (i32.const 1) (local.get $map))
     (table.set $rw_table_2 (i32.const 2) (local.get $curried_cc))
     (table.set $rw_table_2 (i32.const 3) (local.get $c_files))
@@ -164,7 +205,16 @@
     (local.set $o_files)
 
     ;; elf_file = ld(o_files)
-    (table.set $rw_table_3 (i32.const 0) (local.get $resource_limits))
+    (table.set $rw_table_3 (i32.const 0)
+    (call $create_resource_limits
+          ;; memory usage 1024 * 1024 * 1024
+          (i64.const 1073741824)
+          ;; estimated output_size: wasm module size / 2
+          (i32.shr_u
+            (call $size_ro_mem_0)
+            (i32.const 1))
+          ;; estimated output_fan_out
+          (i32.const 1)))
     (table.set $rw_table_3 (i32.const 1) (local.get $ld))
     (table.set $rw_table_3 (i32.const 2) (local.get $o_files))
     (call $create_tree_rw_table_3 (i32.const 3))
@@ -178,7 +228,16 @@
     ;; runnable, instead of extracting it from the compile encode. Luckily,
     ;; since we're in Compile right now, Fixpoint will accept this as a valid
     ;; Runnable tag.
-    (table.set $rw_table_4 (i32.const 0) (local.get $resource_limits))
+    (table.set $rw_table_4 (i32.const 0)
+     (call $create_resource_limits
+          ;; memory usage 1024 * 1024 * 1024
+          (i64.const 1073741824)
+          ;; estimated output_size: wasm module size / 2
+          (i32.shr_u
+            (call $size_ro_mem_0)
+            (i32.const 1))
+          ;; estimated output_fan_out
+          (i32.const 1)))
     (table.set $rw_table_4 (i32.const 1) (call $tag_runnable (local.get $compile)))
     (table.set $rw_table_4 (i32.const 2) (call $tag_continuation (local.get $elf_file)))
     (call $create_tree_rw_table_4 (i32.const 3))
