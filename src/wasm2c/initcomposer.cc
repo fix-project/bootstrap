@@ -300,17 +300,17 @@ void InitComposer::write_unsafe_io()
 {
 
   result_ << "extern void fixpoint_unsafe_io(uint32_t index, uint32_t length, wasm_rt_memory_t* main_mem);" << endl;
-  result_ << "void " << ExportName( "fixpoint", "unsafe_io" );
-  result_ << "(struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {" << endl;
 
-  // Only call fixpoint_unsafe_io if there is a memory called "memory"
-  // Otherwise unsafe_io is a no op.
-  if ( inspector_->ExportsMainMemory() ) {
-    result_ << "  wasm_rt_memory_t* main_mem = " << ExportName( module_prefix_, "memory" ) << "(("
-            << state_info_type_name_ << "*)instance);" << endl;
-    result_ << "  fixpoint_unsafe_io(index, length, main_mem);" << endl;
+  for ( Export* export_ : current_module_->exports ) {
+    if ( export_->kind == ExternalKind::Memory ) {
+      result_ << "void " << ExportName( "fixpoint", export_->name + "_unsafe_io" );
+      result_ << "(struct w2c_fixpoint* instance, uint32_t index, uint32_t length) {" << endl;
+      result_ << "  wasm_rt_memory_t* mem_instance = " << ExportName( module_prefix_, export_->name ) << "(("
+              << state_info_type_name_ << "*)instance);" << endl;
+      result_ << "  fixpoint_unsafe_io(index, length, mem_instance);" << endl;
+      result_ << "}\n" << endl;
+    }
   }
-  result_ << "}\n" << endl;
 }
 
 void InitComposer::write_get_attached_tree()
