@@ -396,6 +396,7 @@ string InitComposer::compose_header()
 
   vector<function> fns = {
     { "u8x32", "create_blob_i32", { "uint32_t" } },
+    { "u8x32", "create_blob_i64", { "uint64_t" } },
     { "u8x32", "create_tag", { "u8x32", "u8x32" } },
     { "u8x32", "create_application_thunk", { "u8x32" } },
     { "u8x32", "create_strict_encode", { "u8x32" } },
