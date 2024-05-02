@@ -7,7 +7,7 @@
   (table $input (export "ro_table_0") 0 externref)
   (table $clang_deps (export "ro_table_1") 0 externref)
   (table $return (export "rw_table_0") 4 externref)
-  (table $rw_table_1 (export "rw_table_1") 257 externref)
+  (table $rw_table_1 (export "rw_table_1") 2049 externref)
   ;; access program memory
   (func (export "get_program_i32") (param $offset i32) (result i32)
     (local.get $offset)
