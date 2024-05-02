@@ -9,6 +9,8 @@
   (import "fixpoint" "create_tree_rw_table_1" (func $create_tree_rw_table_1 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_2" (func $create_tree_rw_table_2 (param i32) (result externref)))
   (import "fixpoint" "create_application_thunk" (func $create_application_thunk (param externref) (result externref)))
+  (import "fixpoint" "create_identification_thunk" (func $create_identification_thunk (param externref) (result externref)))
+  (import "fixpoint" "create_strict_encode" (func $create_strict_encode (param externref) (result externref)))
   (import "fixpoint" "is_equal" (func $is_equal (param externref externref) (result i32)))
   (import "fixpoint" "create_tag" (func $create_tag (param externref externref) (result externref)))
   (import "fixpoint" "get_length" (func $get_length (param externref) (result i32)))
@@ -84,7 +86,7 @@
                 ;; estimated output_fan_out
                 (i32.const 1)))
           ;; procedure
-          (table.set $rw_table_0 (i32.const 1) (table.get $ro_table_0 (i32.const 2)))
+          (table.set $rw_table_0 (i32.const 1) (call $create_strict_encode (call $create_identification_thunk (table.get $ro_table_0 (i32.const 2)))))
           ;; x
           (table.set $rw_table_0 (i32.const 2) (local.get $x))
           ;; arg[i]

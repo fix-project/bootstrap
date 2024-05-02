@@ -400,6 +400,7 @@ string InitComposer::compose_header()
     { "u8x32", "create_tag", { "u8x32", "u8x32" } },
     { "u8x32", "create_application_thunk", { "u8x32" } },
     { "u8x32", "create_strict_encode", { "u8x32" } },
+    { "u8x32", "create_identification_thunk", { "u8x32" } },
     //  { "uint32_t", "pin", { "u8x32", "u8x32" } },
     //  { "u8x32", "debug_try_evaluate", { "u8x32" } },
     // { "u8x32", "debug_try_inspect", { "u8x32" } },

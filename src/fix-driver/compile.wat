@@ -1,8 +1,6 @@
 (module
   (import "fixpoint" "attach_tree_ro_table_0" (func $attach_tree_ro_table_0 (param externref)))
   (import "fixpoint" "attach_tree_ro_table_1" (func $attach_tree_ro_table_1 (param externref)))
-  (import "fixpoint" "attach_blob_ro_mem_0" (func $attach_blob_ro_mem_0 (param externref)))
-  (import "fixpoint" "size_ro_mem_0" (func $size_ro_mem_0 (result i32)))
   (import "fixpoint" "create_blob_i32" (func $create_blob_i32 (param i32) (result externref)))
   (import "fixpoint" "create_blob_i64" (func $create_blob_i64 (param i64) (result externref)))
   (import "fixpoint" "create_blob_rw_mem_0" (func $create_blob_rw_mem_0 (param i32) (result externref)))
@@ -18,13 +16,13 @@
   (import "fixpoint" "create_tree_rw_table_4" (func $create_tree_rw_table_4 (param i32) (result externref)))
   (import "fixpoint" "create_tree_rw_table_5" (func $create_tree_rw_table_5 (param i32) (result externref)))
   (import "fixpoint" "create_application_thunk" (func $create_application_thunk (param externref) (result externref)))
+  (import "fixpoint" "create_identification_thunk" (func $create_identification_thunk (param externref) (result externref)))
   (import "fixpoint" "create_strict_encode" (func $create_strict_encode (param externref) (result externref)))
   (import "fixpoint" "is_equal" (func $is_equal (param externref externref) (result i32)))
   (import "fixpoint" "create_tag" (func $create_tag (param externref externref) (result externref)))
   (import "fixpoint" "is_blob" (func $is_blob (param externref) (result i32)))
   (import "fixpoint" "is_tag" (func $is_tag (param externref) (result i32)))
   (import "fixpoint" "get_length" (func $get_length (param externref) (result i32)))
-  (memory $ro_mem_0 (export "ro_mem_0") 0)
   (table $ro_table_0 (export "ro_table_0") 0 externref)
   (table $ro_table_1 (export "ro_table_1") 0 externref)
   (memory (export "rw_mem_0") (data "Runnable"))
@@ -74,12 +72,10 @@
     (i32.eq (i32.const 1))
     (if
       (then
-        ;; if it's a Blob, get the size
-        (call $attach_blob_ro_mem_0 (local.get $input))
         ;; input.size() >> 14
         (global.set $parallelism
           (i32.shr_u
-            (call $size_ro_mem_0)
+            (call $get_length (local.get $input))
             (i32.const 14)))
       ))
     (local.set $inner (table.get $ro_table_0 (i32.const 1)))
@@ -163,12 +159,13 @@
           (i64.const 1073741824)
           ;; estimated output_size: 2 * wasm module size
           (i32.mul
-            (call $size_ro_mem_0)
+            ;; size from blobref
+            (call $get_length (local.get $input))
             (i32.const 2))
           ;; estimated output_fan_out
           (global.get $parallelism)))
-    (table.set $rw_table_0 (i32.const 1) (local.get $wasm2c))
-    (table.set $rw_table_0 (i32.const 2) (local.get $input))
+    (table.set $rw_table_0 (i32.const 1) (call $create_strict_encode (call $create_identification_thunk (local.get $wasm2c))))
+    (table.set $rw_table_0 (i32.const 2) (call $create_strict_encode (call $create_identification_thunk (local.get $input))))
     (call $create_tree_rw_table_0 (i32.const 3)) (call $create_application_thunk)
     (call $create_strict_encode)
 
@@ -188,15 +185,18 @@
      (call $create_resource_limits
           ;; memory usage 1024 * 1024 * 1024
           (i64.const 1073741824)
-          ;; estimated output_size: parallelism * 4 * sizeof( Handle ) + curried_cc.size
+          ;; estimated output_size: parallelism * 4 * sizeof( Handle ) + wasm2c output size
           (i32.add
             (i32.mul
               (global.get $parallelism)
               (i32.const 32))
-            (call $get_length (local.get $curried_cc)))
+            (i32.mul
+              ;; size from blobref
+              (call $get_length (local.get $input))
+              (i32.const 2)))
           ;; estimated fan_out : parallelism
           (global.get $parallelism)))
-    (table.set $rw_table_2 (i32.const 1) (local.get $map))
+    (table.set $rw_table_2 (i32.const 1) (call $create_strict_encode (call $create_identification_thunk (local.get $map))))
     (table.set $rw_table_2 (i32.const 2) (local.get $curried_cc))
     (table.set $rw_table_2 (i32.const 3) (local.get $c_files))
     (call $create_tree_rw_table_2 (i32.const 4))
@@ -211,11 +211,11 @@
           (i64.const 1073741824)
           ;; estimated output_size: wasm module size / 2
           (i32.shr_u
-            (call $size_ro_mem_0)
+            (call $get_length (local.get $input))
             (i32.const 1))
           ;; estimated output_fan_out
           (i32.const 1)))
-    (table.set $rw_table_3 (i32.const 1) (local.get $ld))
+    (table.set $rw_table_3 (i32.const 1) (call $create_strict_encode (call $create_identification_thunk (local.get $ld))))
     (table.set $rw_table_3 (i32.const 2) (local.get $o_files))
     (call $create_tree_rw_table_3 (i32.const 3))
     (call $create_application_thunk)
@@ -234,7 +234,7 @@
           (i64.const 1073741824)
           ;; estimated output_size: wasm module size / 2
           (i32.shr_u
-            (call $size_ro_mem_0)
+            (call $get_length (local.get $input))
             (i32.const 1))
           ;; estimated output_fan_out
           (i32.const 1)))
