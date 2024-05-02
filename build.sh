@@ -50,7 +50,7 @@ for task in ${Tasks}; do
   "${SRC}"/build/src/sys-driver/wasm-to-c-sys "${SRC}"/fix-build/src/fix-driver/"${task}".wasm "${OUTPUT}"/"${task}"
 
   echo "Compiling $task to ELF..."
-  for i in {0..255}
+  for i in {0..2047}
   do
     if test -f "${OUTPUT}"/"${task}"/function"${i}".c; then
 
@@ -62,7 +62,7 @@ for task in ${Tasks}; do
       fi
     fi
     printf "\r"
-    progress_bar "$task" $(("$i"-"$running")) "$running" 256
+    progress_bar "$task" $(("$i"-"$running")) "$running" 2048
   done
 
   while [ "$running" != 0 ]
@@ -70,14 +70,14 @@ for task in ${Tasks}; do
     wait -n
     running=$(jobs -r | wc -l)
     printf "\r"
-    progress_bar "$task" $((256-"$running")) "$running" 256
+    progress_bar "$task" $((2048-"$running")) "$running" 2048
   done
   echo
 
   echo "Linking $task..."
   LLDSYS="${SRC}/build/src/sys-driver/link-elfs-sys ${OUTPUT}/${task}.o"
 
-  for i in {0..255}
+  for i in {0..2047}
   do
     if test -f "${OUTPUT}"/"${task}"/function"${i}".c; then
       LLDSYS+=" "
