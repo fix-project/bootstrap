@@ -39,6 +39,7 @@ static const std::vector<const char*> system_deps
       "/usr/include/x86_64-linux-gnu/bits/types/time_t.h",
       "/usr/include/x86_64-linux-gnu/bits/types/timer_t.h",
       "/usr/include/x86_64-linux-gnu/bits/stdint-intn.h",
+      "/usr/include/x86_64-linux-gnu/bits/stdint-least.h",
       "/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h",
       "/usr/include/endian.h",
       "/usr/include/x86_64-linux-gnu/bits/endian.h",
