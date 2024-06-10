@@ -54,7 +54,7 @@ for task in ${Tasks}; do
   do
     if test -f "${OUTPUT}"/"${task}"/function"${i}".c; then
 
-      "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/18/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
+      "${SRC}"/build/src/sys-driver/c-to-elf-sys "${OUTPUT}"/"${task}"/function"${i}".c "${OUTPUT}"/"${task}"/function-impl.h "${OUTPUT}"/"${task}"/function.h "${SRC}"/build/llvm-project/llvm/lib/clang/19/include/ "${OUTPUT}"/"${task}"/function"${i}".o &
       running=$(jobs -r | wc -l)
       if [ "$running" -ge $(("$PARALLEL"-1)) ]
       then

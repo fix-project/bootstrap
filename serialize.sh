@@ -9,4 +9,4 @@ mkdir -p ${FIX}/relations
 mkdir -p ${FIX}/labels
 mkdir -p ${FIX}/pins
 
-${SRC}/build/src/serialize/serialize ${SRC}/ ${SRC}/build/llvm-project/llvm/lib/clang/18/include/
+${SRC}/build/src/serialize/serialize ${SRC}/ ${SRC}/build/llvm-project/llvm/lib/clang/19/include/

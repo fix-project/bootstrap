@@ -15,7 +15,7 @@ if cli.cmake_build_type then
   configure_flags = configure_flags .. "-DCMAKE_BUILD_TYPE=" .. cli.cmake_build_type
 end
 
-local llvm_include="build/llvm-project/llvm/lib/clang/18/include/"
+local llvm_include="build/llvm-project/llvm/lib/clang/19/include/"
 
 rules = b{}
 for _, step in pairs(fix_steps) do
