@@ -94,15 +94,13 @@
     (local $system_deps externref)
     (local $clang_deps externref)
     (local $map externref)
-    (local $compile externref)
+    (local $compiletag externref)
 
     (call $attach_tree_ro_table_0 (local.get $inner))
 
     ;; inner[1] ought to be the fixed point, i.e., a tag authored by
     ;; compile.elf claiming that compile.elf itself is runnable
-    (call $attach_tree_ro_table_1 (table.get $ro_table_0 (i32.const 1)))
-    ;; inner[1][0] is compile.elf
-    (local.set $compile (table.get $ro_table_1 (i32.const 0)))
+    (local.set $compiletag (table.get $ro_table_0 (i32.const 1)))
 
     ;; inner[2] is the "bootstrap tag"; this is a special tag, authored
     ;; by compile.elf, marking a tree of resources as the string
@@ -111,7 +109,7 @@
     (call $attach_tree_ro_table_0 (table.get $ro_table_0 (i32.const 2)))
 
     ;; check if the tag was authored by us
-    (call $is_equal (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
+    (call $is_equal (local.get $compiletag) (table.get $ro_table_0 (i32.const 0)))
 
     (if (result externref)
       (then
@@ -128,14 +126,14 @@
         (local.set $clang_deps (table.get $ro_table_0 (i32.const 4)))
         (local.set $map (table.get $ro_table_0 (i32.const 5)))
 
-        (call $make_compilation_thunk (local.get $resource_limits) (local.get $compile) (local.get $input) (local.get $wasm2c) (local.get $cc) (local.get $ld) (local.get $system_deps) (local.get $clang_deps) (local.get $map)))
+        (call $make_compilation_thunk (local.get $resource_limits) (local.get $compiletag) (local.get $input) (local.get $wasm2c) (local.get $cc) (local.get $ld) (local.get $system_deps) (local.get $clang_deps) (local.get $map)))
       (else
         ;; invalid tag, return an error
         (call $error_invalid_boot_tree))))
 
   (func $make_compilation_thunk
     (param $resource_limits externref)
-    (param $compile externref)
+    (param $compiletag externref)
     (param $input externref)
     (param $wasm2c externref)
     (param $cc externref)
@@ -223,11 +221,6 @@
     (local.set $elf_file)
 
     ;; result = compile(tag(elf_file, "Continuation"))
-    ;;
-    ;; We cheat a bit here by creating a new tag that says the compile ELF is
-    ;; runnable, instead of extracting it from the compile encode. Luckily,
-    ;; since we're in Compile right now, Fixpoint will accept this as a valid
-    ;; Runnable tag.
     (table.set $rw_table_4 (i32.const 0)
      (call $create_resource_limits
           ;; memory usage 1024 * 1024 * 1024
@@ -238,7 +231,7 @@
             (i32.const 1))
           ;; estimated output_fan_out
           (i32.const 1)))
-    (table.set $rw_table_4 (i32.const 1) (call $tag_runnable (local.get $compile)))
+    (table.set $rw_table_4 (i32.const 1) (local.get $compiletag))
     (table.set $rw_table_4 (i32.const 2) (call $tag_continuation (local.get $elf_file)))
     (call $create_tree_rw_table_4 (i32.const 3))
     (call $create_application_thunk))
@@ -306,12 +299,7 @@
       )))
 
   (func $do_validate (param $inner externref) (param $input externref) (result externref)
-      (local $compile externref)
       (local $result externref)
-
-      ;; get the name of this ELF file
-      (call $attach_tree_ro_table_0 (local.get $inner))
-      (local.set $compile (table.get $ro_table_0 (i32.const 1)))
 
       (call $is_tag (local.get $input))
       (i32.eq (i32.const 1))
@@ -327,7 +315,7 @@
       ;; Attach the Tag
       (call $attach_tree_ro_table_0 (local.get $input))
       ;; check if the tag was authored by us
-      (call $is_equal (local.get $compile) (table.get $ro_table_0 (i32.const 0)))
+      (call $is_equal (local.get $inner) (table.get $ro_table_0 (i32.const 0)))
       (if
         (then
           ;; Created by compile

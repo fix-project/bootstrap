@@ -124,11 +124,12 @@ int main( int argc, char* argv[] )
   }
 
   vector<Handle<Fix>> runnable_tags;
-  for ( size_t i = 0; i < 4; i++ ) {
-    runnable_tags.push_back( create_tag( elf_names[4], elf_names[i], Handle<Literal>( "Runnable" ) ) );
-  }
+  auto compile_fixedpoint = create_tag( elf_names[4], elf_names[4], Handle<Literal>( "Runnable" ) );
+  auto compile_runnable_tag = create_tag( compile_fixedpoint, elf_names[4], Handle<Literal>( "Runnable" ) );
 
-  auto compile_runnable_tag = create_tag( elf_names[4], elf_names[4], Handle<Literal>( "Runnable" ) );
+  for ( size_t i = 0; i < 4; i++ ) {
+    runnable_tags.push_back( create_tag( compile_fixedpoint, elf_names[i], Handle<Literal>( "Runnable" ) ) );
+  }
 
   // {runnable-wasm2c.elf, runnable-clang.elf, runnable-lld.elf, system_dep_tree, clang_dep_tree, runnable-map.elf }
   auto compile_tool_tree_name = create_tree( create_tree_ref( runnable_tags[0] ),
@@ -140,11 +141,11 @@ int main( int argc, char* argv[] )
 
   // Tag compile_tool_tree bootstrap
   auto tagged_compile_tool_tree
-    = create_tag( elf_names[4], compile_tool_tree_name, Handle<Literal>( "Bootstrap" ) );
+    = create_tag( compile_fixedpoint, compile_tool_tree_name, Handle<Literal>( "Bootstrap" ) );
 
   // Encode: {r, runnable-compile.elf, tagged-compile-tool-tree}
   auto compile_encode_name
-    = create_tree( Handle<Literal>( "compile" ), compile_runnable_tag, tagged_compile_tool_tree );
+    = create_tree( Handle<Literal>( "compile" ), compile_fixedpoint, tagged_compile_tool_tree );
 
   rp.label( "compile-encode", compile_encode_name );
 
@@ -158,6 +159,7 @@ int main( int argc, char* argv[] )
     rp.label( files[i] + "-runnable-tag", runnable_tags[i] );
   }
 
+  rp.label( "compile-fixed-point", compile_fixedpoint );
   rp.label( "compile-runnable-tag", compile_runnable_tag );
   rp.label( "compile-elf", elf_names[4] );
   rp.label( "system-dep-tree", system_dep_tree_name );
