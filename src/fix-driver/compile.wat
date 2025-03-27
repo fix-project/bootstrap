@@ -153,8 +153,8 @@
     ;; c_files = wasm2c(input)
     (table.set $rw_table_0 (i32.const 0)
     (call $create_resource_limits
-          ;; memory usage 1024 * 1024 * 1024
-          (i64.const 1073741824)
+          ;; memory usage 5 * 1024 * 1024 * 1024
+          (i64.const 5368709120)
           ;; estimated output_size: 2 * wasm module size
           (i32.mul
             ;; size from blobref
@@ -181,8 +181,8 @@
     ;; o_files = map(curried_cc, c_files)
     (table.set $rw_table_2 (i32.const 0)
      (call $create_resource_limits
-          ;; memory usage 1024 * 1024 * 1024
-          (i64.const 1073741824)
+          ;; memory usage 5 * 1024 * 1024 * 1024
+          (i64.const 5368709120)
           ;; estimated output_size: parallelism * 4 * sizeof( Handle ) + wasm2c output size
           (i32.add
             (i32.mul
@@ -205,8 +205,8 @@
     ;; elf_file = ld(o_files)
     (table.set $rw_table_3 (i32.const 0)
     (call $create_resource_limits
-          ;; memory usage 1024 * 1024 * 1024
-          (i64.const 1073741824)
+          ;; memory usage 5 * 1024 * 1024 * 1024
+          (i64.const 5368709120)
           ;; estimated output_size: wasm module size / 2
           (i32.shr_u
             (call $get_length (local.get $input))
@@ -223,8 +223,8 @@
     ;; result = compile(tag(elf_file, "Continuation"))
     (table.set $rw_table_4 (i32.const 0)
      (call $create_resource_limits
-          ;; memory usage 1024 * 1024 * 1024
-          (i64.const 1073741824)
+          ;; memory usage 5 * 1024 * 1024 * 1024
+          (i64.const 5368709120)
           ;; estimated output_size: wasm module size / 2
           (i32.shr_u
             (call $get_length (local.get $input))

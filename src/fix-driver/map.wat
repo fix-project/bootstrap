@@ -96,8 +96,8 @@
           (table.set $rw_table_0
             (i32.const 0)
             (call $create_resource_limits
-                ;; memory usage 1024 * 1024 * 1024
-                (i64.const 1073741824)
+                ;; memory usage 5 * 1024 * 1024 * 1024
+                (i64.const 5368709120)
                 ;; estimated output_size: c-file-size / 4 
                 (i32.shr_u
                   (call $get_length (table.get $ro_table_1 (local.get $i)))
