@@ -16,6 +16,7 @@ static const std::vector<const char*> system_deps
       "/usr/include/x86_64-linux-gnu/bits/typesizes.h",
       "/usr/include/x86_64-linux-gnu/bits/time64.h",
       "/usr/include/x86_64-linux-gnu/bits/math-vector.h",
+      "/usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h",
       "/usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h",
       "/usr/include/x86_64-linux-gnu/bits/floatn.h",
       "/usr/include/x86_64-linux-gnu/bits/floatn-common.h",
